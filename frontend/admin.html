@@ -118,11 +118,20 @@ let session = null;
 async function mget(path) {
   return apiFetch(`/manage${path}`);
 }
-await mpost('/projects', {
-  name,
-  description: v('f-pdesc')
-});
-await mdel(`/time-slots/${id}`);
+
+async function mpost(path, body, method = 'POST', idempotencyKey) {
+  return apiFetch(`/manage${path}`, {
+    method,
+    body: JSON.stringify(body),
+    ...(idempotencyKey ? { idempotencyKey } : {}),
+  });
+}
+
+async function mdel(path) {
+  return apiFetch(`/manage${path}`, {
+    method: 'DELETE',
+  });
+}
 
 // ── ログイン ──────────────────────────────────────────────
 document.getElementById('btn-login').onclick = async () => {
