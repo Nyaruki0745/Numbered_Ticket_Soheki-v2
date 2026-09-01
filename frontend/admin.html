@@ -174,9 +174,20 @@ async function renderView() {
   }
 }
 
-function goProjects() { state = { view:'projects', projectId:null, sheetId:null, tab:'slots' }; renderView(); }
-function goProject(id) { state = { ...state, view:'project', projectId:id, sheetId:null }; renderView(); }
-function goSheet(id) { state = { ...state, view:'sheet', sheetId:id }; renderView(); }
+window.goProjects = function() {
+  state = { view:'projects', projectId:null, sheetId:null, tab:'slots' };
+  renderView();
+};
+
+window.goProject = function(id) {
+  state = { ...state, view:'project', projectId:id, sheetId:null };
+  renderView();
+};
+
+window.goSheet = function(id) {
+  state = { ...state, view:'sheet', sheetId:id };
+  renderView();
+};
 
 function updateBreadcrumb() {
   const el = document.getElementById('breadcrumb');
