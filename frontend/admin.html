@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>管理画面</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{min-height:100vh;display:flex;flex-direction:column}
+#header{display:flex;align-items:center;justify-content:space-between;
+  padding:.6rem 1.2rem;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+#header h1{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text2)}
+.breadcrumb span{cursor:pointer;color:var(--accent)}
+.breadcrumb span:hover{text-decoration:underline}
+.sep{color:var(--text3)}
+#main{flex:1;padding:1.25rem;max-width:900px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:1rem}
+
+/* ログイン */
+#login-wrap{flex:1;display:flex;align-items:center;justify-content:center}
+.login-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem}
+
+/* セクションカード */
+.section-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.section-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg3)}
+.section-header h2{font-size:.95rem;font-weight:700}
+.section-body{padding:1rem;display:flex;flex-direction:column;gap:.6rem}
+
+/* リストアイテム */
+.list-item{display:flex;align-items:center;justify-content:space-between;
+  padding:.65rem .9rem;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);cursor:pointer;transition:border-color .15s}
+.list-item:hover{border-color:var(--accent)}
+.list-item .title{font-weight:600;font-size:.92rem}
+.list-item .meta{font-size:.78rem;color:var(--text2);margin-top:.1rem}
+.list-item-actions{display:flex;gap:.4rem;flex-shrink:0}
+
+/* タブ */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem}
+.tab{padding:.55rem 1rem;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--text2);
+  border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* フォームモーダル */
+#modal-overlay{display:none;position:fixed;inset:0;background:#000c;z-index:200;
+  align-items:center;justify-content:center;padding:1rem}
+#modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);
+  width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:1.5rem;
+  display:flex;flex-direction:column;gap:1rem}
+.modal-box h3{font-size:1.05rem;font-weight:700}
+.modal-footer{display:flex;gap:.6rem;justify-content:flex-end;margin-top:.5rem}
+
+/* 時間帯テーブル */
+.time-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.time-table th{text-align:left;padding:.4rem .6rem;color:var(--text2);
+  border-bottom:1px solid var(--border);font-size:.78rem;font-weight:600}
+.time-table td{padding:.5rem .6rem;border-bottom:1px solid var(--border)}
+.time-table tr:last-child td{border-bottom:none}
+
+/* スタッフバッジ */
+.perm-badge{font-size:.72rem;padding:.15rem .5rem;border-radius:999px;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text2)}
+.perm-badge.staff{color:var(--accent);border-color:var(--accent-dim)}
+.perm-badge.sheet_manager{color:var(--success);border-color:#1a3d2a}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>⚙️ 管理画面</h1>
+  <div class="flex gap-1" style="align-items:center">
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <button class="btn btn-ghost btn-sm" id="btn-logout" style="display:none">ログアウト</button>
+  </div>
+</div>
+
+<!-- ログイン -->
+<div id="login-wrap">
+  <div class="login-box card">
+    <div style="text-align:center;font-size:1.8rem">⚙️</div>
+    <h2 style="text-align:center">管理者ログイン</h2>
+    <div class="field"><label>ユーザー名</label><input id="login-user" autocomplete="username"></div>
+    <div class="field"><label>パスワード</label><input id="login-pass" type="password"></div>
+    <button class="btn btn-primary btn-lg w-full" id="btn-login">ログイン</button>
+    <p id="login-err" class="text-danger text-center" style="min-height:1.2em;font-size:.85rem"></p>
+  </div>
+</div>
+
+<!-- メイン -->
+<div id="main" style="display:none"></div>
+
+<!-- モーダル -->
+<div id="modal-overlay">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module">
+import { api, toast, genKey, saveToken, clearToken, getToken } from './js/api.js';
+
+// ── 状態 ──────────────────────────────────────────────────
+let state = { view: 'projects', projectId: null, sheetId: null, tab: 'slots' };
+let session = null;
+
+// ── APIヘルパー ────────────────────────────────────────────
+async function mget(path) {
+  const res = await fetch(`/api/manage${path}`, {
+    headers: { Authorization: `Bearer ${getToken()}` }
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
+  return j.data;
+}
+async function mpost(path, body, method='POST') {
+  const res = await fetch(`/api/manage${path}`, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+    body: JSON.stringify(body)
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
+  return j.data;
+}
+async function mdel(path) {
+  const res = await fetch(`/api/manage${path}`, {
+    method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
+  return j.data;
+}
+
+// ── ログイン ──────────────────────────────────────────────
+document.getElementById('btn-login').onclick = async () => {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await api.login(u, p);
+    saveToken(data.token);
+    session = data.user;
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('main').style.display = 'flex';
+    document.getElementById('btn-logout').style.display = '';
+    renderView();
+  } catch(e) {
+    err.textContent = e.message;
+  } finally { btn.disabled = false; btn.textContent = 'ログイン'; }
+};
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btn-login').click(); });
+
+document.getElementById('btn-logout').onclick = async () => {
+  try { await api.logout(); } catch(_) {}
+  clearToken(); location.reload();
+};
+
+// ── ルーティング ───────────────────────────────────────────
+async function renderView() {
+  updateBreadcrumb();
+  const main = document.getElementById('main');
+  main.innerHTML = '<p style="color:var(--text2)">読み込み中...</p>';
+  try {
+    if (state.view === 'projects') await renderProjects(main);
+    else if (state.view === 'project')  await renderProject(main);
+    else if (state.view === 'sheet')    await renderSheet(main);
+  } catch(e) {
+    main.innerHTML = `<p class="text-danger">${e.message}</p>`;
+  }
+}
+
+function goProjects() { state = { view:'projects', projectId:null, sheetId:null, tab:'slots' }; renderView(); }
+function goProject(id) { state = { ...state, view:'project', projectId:id, sheetId:null }; renderView(); }
+function goSheet(id) { state = { ...state, view:'sheet', sheetId:id }; renderView(); }
+
+function updateBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  const parts = [`<span onclick="goProjects()">企画一覧</span>`];
+  if (state.view === 'project' || state.view === 'sheet') parts.push('<span class="sep">›</span>', `<span onclick="goProject(${state.projectId})">企画</span>`);
+  if (state.view === 'sheet') parts.push('<span class="sep">›</span>', `<span>シート</span>`);
+  el.innerHTML = parts.join('');
+}
+
+// ── 企画一覧 ──────────────────────────────────────────────
+async function renderProjects(el) {
+  const data = await mget('/projects');
+  el.innerHTML = `
+    <div class="section-card">
+      <div class="section-header">
+        <h2>企画一覧</h2>
+        <button class="btn btn-primary btn-sm" onclick="showCreateProject()">+ 企画作成</button>
+      </div>
+      <div class="section-body">
+        ${data.projects.length === 0 ? '<p class="text-muted">企画がありません</p>' :
+          data.projects.map(p => `
+            <div class="list-item" onclick="goProject(${p.id})">
+              <div>
+                <div class="title">${esc(p.name)}</div>
+                <div class="meta">${esc(p.description??'')} ・ ${statusLabel(p.status)}</div>
+              </div>
+              <span style="color:var(--accent)">→</span>
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+window.showCreateProject = () => showModal('企画作成', `
+  <div class="field"><label>企画名 *</label><input id="f-pname" placeholder="1組 お化け屋敷"></div>
+  <div class="field"><label>説明</label><input id="f-pdesc" placeholder="任意"></div>`,
+  async () => {
+    const name = v('f-pname');
+    if (!name) { toast('企画名は必須です','error'); return false; }
+    await mpost('/projects', { name, description: v('f-pdesc') });
+    toast('企画を作成しました','success'); return true;
+  }, renderView
+);
+
+// ── 企画詳細（シート一覧） ────────────────────────────────
+async function renderProject(el) {
+  const data = await mget(`/projects/${state.projectId}`);
+  el.innerHTML = `
+    <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between">
+      <div><strong>${esc(data.project.name)}</strong><span class="text-muted" style="margin-left:.5rem">${statusLabel(data.project.status)}</span></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header">
+        <h2>シート一覧</h2>
+        <button class="btn btn-primary btn-sm" onclick="showCreateSheet()">+ シート作成</button>
+      </div>
+      <div class="section-body">
+        ${data.sheets.length === 0 ? '<p class="text-muted">シートがありません</p>' :
+          data.sheets.map(s => `
+            <div class="list-item" onclick="goSheet(${s.id})">
+              <div>
+                <div class="title">${esc(s.name)}</div>
+                <div class="meta">プレフィックス: ${esc(s.ticket_prefix)} ・ ${statusLabel(s.status)}</div>
+              </div>
+              <span style="color:var(--accent)">→</span>
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+window.showCreateSheet = () => showModal('シート作成', `
+  <div class="field"><label>シート名 *</label><input id="f-sname" placeholder="A1（1日目）"></div>
+  <div class="field"><label>整理券プレフィックス * （英大文字2〜4文字）</label><input id="f-spfx" placeholder="A01" maxlength="4" style="text-transform:uppercase"></div>
+  <div class="field"><label>連番桁数</label><input id="f-sdigs" type="number" value="4" min="3" max="6"></div>`,
+  async () => {
+    const name = v('f-sname'), pfx = v('f-spfx').toUpperCase(), digs = parseInt(v('f-sdigs')||'4');
+    if (!name || !pfx) { toast('シート名・プレフィックスは必須です','error'); return false; }
+    await mpost(`/projects/${state.projectId}/sheets`, { name, ticketPrefix: pfx, ticketDigits: digs });
+    toast('シートを作成しました','success'); return true;
+  }, renderView
+);
+
+// ── シート詳細 ────────────────────────────────────────────
+async function renderSheet(el) {
+  const data = await mget(`/sheets/${state.sheetId}/detail`);
+  const tabNames = { slots:'時間帯', staff:'スタッフ', notices:'注意事項' };
+  el.innerHTML = `
+    <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <strong>${esc(data.sheet.name)}</strong>
+        <span class="text-muted" style="margin-left:.5rem">プレフィックス: ${esc(data.sheet.ticket_prefix)}</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
+        <input type="checkbox" ${data.sheet.entry_enabled?'checked':''} onchange="toggleEntry(${data.sheet.id},this.checked)"> 入場管理
+      </label>
+    </div>
+    <div class="section-card">
+      <div class="tabs">
+        ${Object.entries(tabNames).map(([k,v]) =>
+          `<div class="tab ${state.tab===k?'active':''}" onclick="switchTab('${k}')">${v}（${k==='slots'?data.timeSlots.length:k==='staff'?data.users.length:data.notices.length}）</div>`
+        ).join('')}
+      </div>
+      <div style="padding:0 1rem 1rem" id="tab-content">
+        ${state.tab==='slots'   ? renderSlots(data.timeSlots)   :
+          state.tab==='staff'   ? renderStaff(data.users)        :
+                                  renderNotices(data.notices)}
+      </div>
+    </div>`;
+}
+
+window.switchTab = (tab) => { state.tab = tab; renderView(); };
+window.toggleEntry = async (id, v) => {
+  await mpost(`/sheets/${id}`, { entryEnabled: v }, 'PUT');
+  toast('更新しました','success');
+};
+
+// ── 時間帯タブ ────────────────────────────────────────────
+function renderSlots(slots) {
+  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateSlot()">+ 時間帯追加</button>`;
+  if (!slots.length) return addBtn + '<p class="text-muted">時間帯がありません</p>';
+  return addBtn + `
+    <table class="time-table">
+      <thead><tr><th>名前</th><th>時間帯</th><th>定員</th><th>呼出</th><th>失効</th><th></th></tr></thead>
+      <tbody>
+        ${slots.map(s => `<tr>
+          <td>${esc(s.name)}</td>
+          <td>${fmtDT(s.start_at)}〜${fmtT(s.end_at)}</td>
+          <td>${s.capacity_groups}組</td>
+          <td>${fmtT(s.call_start_at)}〜${fmtT(s.call_end_at)}</td>
+          <td>${fmtT(s.expire_at)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteSlot(${s.id})">削除</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+window.showCreateSlot = () => {
+  const today = new Date().toISOString().slice(0,10);
+  showModal('時間帯追加', `
+    <div class="field"><label>時間帯名 *</label><input id="f-tname" placeholder="13:00〜13:30の部"></div>
+    <div class="field"><label>開催日 *</label><input id="f-tdate" type="date" value="${today}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="field"><label>開始時刻 *</label><input id="f-tstart" type="time" value="13:00"></div>
+      <div class="field"><label>終了時刻 *</label><input id="f-tend" type="time" value="13:30"></div>
+    </div>
+    <div class="field"><label>定員（グループ数） *</label><input id="f-tcap" type="number" min="1" value="10"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
+      <div class="field"><label>呼出開始 *</label><input id="f-tcallstart" type="time" value="12:55"></div>
+      <div class="field"><label>呼出終了 *</label><input id="f-tcallend" type="time" value="13:30"></div>
+      <div class="field"><label>失効時刻 *</label><input id="f-texpire" type="time" value="13:35"></div>
+    </div>
+    <p class="text-muted" style="font-size:.78rem">※ 呼出開始は通常「開始5分前」、失効は「終了5分後」が目安です</p>`,
+    async () => {
+      const name=v('f-tname'), date=v('f-tdate');
+      const ts=v('f-tcallstart'), te=v('f-tcallend'), tx=v('f-texpire');
+      const ss=v('f-tstart'), se=v('f-tend');
+      const cap=parseInt(v('f-tcap')||'0');
+      if (!name||!date||!ss||!se||!cap) { toast('必須項目を入力してください','error'); return false; }
+      const toISO = (d,t) => new Date(`${d}T${t}:00`).toISOString();
+      await mpost(`/sheets/${state.sheetId}/time-slots`, {
+        name, startAt: toISO(date,ss), endAt: toISO(date,se), capacityGroups: cap,
+        callStartAt: toISO(date,ts), callEndAt: toISO(date,te), expireAt: toISO(date,tx),
+      });
+      toast('時間帯を追加しました','success'); return true;
+    }, renderView
+  );
+};
+
+window.deleteSlot = async (id) => {
+  if (!confirm('この時間帯を削除しますか？予約がある場合は影響があります。')) return;
+  await mdel(`/time-slots/${id}`);
+  toast('削除しました','success'); renderView();
+};
+
+// ── スタッフタブ ──────────────────────────────────────────
+function renderStaff(users) {
+  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateStaff()">+ スタッフ追加</button>`;
+  if (!users.length) return addBtn + '<p class="text-muted">スタッフがいません</p>';
+  return addBtn + users.map(u => `
+    <div class="list-item">
+      <div>
+        <div class="title">${esc(u.display_name)} <span class="perm-badge ${u.permission}">${permLabel(u.permission)}</span></div>
+        <div class="meta">@${esc(u.username)} ・ ${u.account_type==='shared'?'共有アカウント':'個人'}</div>
+      </div>
+      <div class="list-item-actions">
+        <button class="btn btn-ghost btn-sm" onclick="showChangePass(${u.id},'${esc(u.display_name)}')">PW変更</button>
+      </div>
+    </div>`).join('');
+}
+
+window.showCreateStaff = () => showModal('スタッフアカウント作成', `
+  <div class="field"><label>表示名 *</label><input id="f-udname" placeholder="A01スタッフ"></div>
+  <div class="field"><label>ユーザー名 * （ログインID）</label><input id="f-uname" placeholder="a01_staff" autocomplete="off"></div>
+  <div class="field"><label>パスワード *（6文字以上）</label><input id="f-upass" type="password" autocomplete="new-password"></div>
+  <div class="field"><label>権限</label>
+    <select id="f-uperm">
+      <option value="staff">スタッフ（受付・呼出のみ）</option>
+      <option value="sheet_manager">シート管理者（設定変更可）</option>
+    </select>
+  </div>`,
+  async () => {
+    const dn=v('f-udname'), un=v('f-uname'), pw=v('f-upass'), pm=v('f-uperm');
+    if (!dn||!un||!pw) { toast('必須項目を入力してください','error'); return false; }
+    if (pw.length < 6) { toast('パスワードは6文字以上です','error'); return false; }
+    await mpost(`/sheets/${state.sheetId}/users`, { displayName:dn, username:un, password:pw, permission:pm, accountType:'shared' });
+    toast('スタッフを追加しました','success'); return true;
+  }, renderView
+);
+
+window.showChangePass = (id, name) => showModal(`パスワード変更: ${name}`, `
+  <div class="field"><label>新しいパスワード *（6文字以上）</label><input id="f-newpass" type="password" autocomplete="new-password"></div>`,
+  async () => {
+    const pw = v('f-newpass');
+    if (!pw || pw.length < 6) { toast('6文字以上で入力してください','error'); return false; }
+    await mpost(`/users/${id}/password`, { password: pw }, 'PUT');
+    toast('パスワードを変更しました','success'); return true;
+  }, () => {}
+);
+
+// ── 注意事項タブ ──────────────────────────────────────────
+function renderNotices(notices) {
+  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateNotice()">+ 注意事項追加</button>`;
+  if (!notices.length) return addBtn + '<p class="text-muted">注意事項がありません</p>';
+  return addBtn + notices.map(n => `
+    <div class="list-item">
+      <div>
+        <div class="title" style="font-size:.85rem">${screenLabel(n.screen_type)} ${n.title?'・'+esc(n.title):''}</div>
+        <div class="meta">${esc(n.body).slice(0,60)}${n.body.length>60?'...':''}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteNotice(${n.id})">削除</button>
+    </div>`).join('');
+}
+
+window.showCreateNotice = () => showModal('注意事項追加', `
+  <div class="field"><label>表示画面</label>
+    <select id="f-nscreen">
+      <option value="reserve">予約画面</option>
+      <option value="reservation_complete">予約完了画面</option>
+      <option value="reception_confirm">受付確認画面</option>
+      <option value="staff_notice">スタッフ画面</option>
+    </select>
+  </div>
+  <div class="field"><label>タイトル</label><input id="f-ntitle" placeholder="任意"></div>
+  <div class="field"><label>本文 *</label><textarea id="f-nbody" rows="4" placeholder="来場者に表示する内容"></textarea></div>`,
+  async () => {
+    const body = v('f-nbody');
+    if (!body) { toast('本文は必須です','error'); return false; }
+    await mpost(`/sheets/${state.sheetId}/notices`, { screenType: v('f-nscreen'), title: v('f-ntitle')||null, body });
+    toast('注意事項を追加しました','success'); return true;
+  }, renderView
+);
+
+window.deleteNotice = async (id) => {
+  if (!confirm('削除しますか？')) return;
+  await mdel(`/notices/${id}`); toast('削除しました','success'); renderView();
+};
+
+// ── モーダル ──────────────────────────────────────────────
+function showModal(title, bodyHtml, onSubmit, onDone) {
+  const ov = document.getElementById('modal-overlay');
+  const box = document.getElementById('modal-box');
+  box.innerHTML = `
+    <h3>${title}</h3>
+    <div style="display:flex;flex-direction:column;gap:.75rem" id="modal-fields">${bodyHtml}</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="btn-modal-ok">保存</button>
+    </div>`;
+  ov.classList.add('open');
+  document.getElementById('btn-modal-cancel').onclick = () => ov.classList.remove('open');
+  document.getElementById('btn-modal-ok').onclick = async () => {
+    const btn = document.getElementById('btn-modal-ok');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const ok = await onSubmit();
+      if (ok !== false) { ov.classList.remove('open'); if (onDone) onDone(); }
+    } catch(e) { toast(e.message, 'error'); }
+    finally { if(btn) { btn.disabled = false; btn.textContent = '保存'; } }
+  };
+  ov.onclick = (e) => { if (e.target === ov) ov.classList.remove('open'); };
+  // 最初のinputにフォーカス
+  setTimeout(() => box.querySelector('input,select,textarea')?.focus(), 50);
+}
+
+// ── ユーティリティ ────────────────────────────────────────
+function v(id) { return (document.getElementById(id)?.value ?? '').trim(); }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDT(iso) { return iso ? new Date(iso).toLocaleDateString('ja-JP',{month:'2-digit',day:'2-digit'}) + ' ' + fmtT(iso) : '—'; }
+function fmtT(iso) { return iso ? new Date(iso).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; }
+function statusLabel(s) { return {draft:'下書き',active:'有効',suspended:'停止中',archived:'アーカイブ'}[s]??s; }
+function permLabel(s) { return {staff:'スタッフ',sheet_manager:'シート管理者',project_manager:'企画管理者',viewer:'閲覧者'}[s]??s; }
+function screenLabel(s) { return {reserve:'予約',reservation_complete:'予約完了',reception_confirm:'受付確認',staff_notice:'スタッフ'}[s]??s; }
+</script>
+</body>
+</html>

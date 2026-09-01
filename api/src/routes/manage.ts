@@ -188,3 +188,73 @@ app.put('/notices/:id', requireAuth, async (c) => {
 });
 
 export default app;
+
+// ============================================================
+// GET エンドポイント（管理画面用）
+// ============================================================
+
+// GET /api/manage/projects
+app.get('/projects', requireAuth, async (c) => {
+  const session = c.get('session');
+  let projects;
+  if (isGlobalAdmin(session.role)) {
+    projects = await c.env.DB.prepare('SELECT * FROM projects ORDER BY created_at DESC').all<any>();
+  } else {
+    projects = await c.env.DB.prepare(
+      `SELECT p.* FROM projects p
+       JOIN user_project_permissions pp ON pp.project_id = p.id
+       WHERE pp.user_id = ? AND pp.permission = 'project_manager'
+       ORDER BY p.created_at DESC`
+    ).bind(session.userId).all<any>();
+  }
+  return successResponse({ projects: projects.results });
+});
+
+// GET /api/manage/projects/:id
+app.get('/projects/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  const project = await c.env.DB.prepare('SELECT * FROM projects WHERE id=?').bind(id).first<any>();
+  if (!project) return errorResponse('PROJECT_NOT_FOUND', '企画が見つかりません');
+  const sheets = await c.env.DB.prepare('SELECT * FROM sheets WHERE project_id=? ORDER BY id').bind(id).all<any>();
+  return successResponse({ project, sheets: sheets.results });
+});
+
+// GET /api/manage/sheets/:sheetId/detail
+app.get('/sheets/:sheetId/detail', requireAuth, requireSheetPermission('sheet_manager'), async (c) => {
+  const sheetId = parseInt(c.req.param('sheetId'), 10);
+  const [sheet, slots, users, notices] = await Promise.all([
+    c.env.DB.prepare('SELECT * FROM sheets WHERE id=?').bind(sheetId).first<any>(),
+    c.env.DB.prepare('SELECT * FROM time_slots WHERE sheet_id=? ORDER BY start_at').bind(sheetId).all<any>(),
+    c.env.DB.prepare(
+      `SELECT u.id, u.username, u.display_name, u.account_type, u.status, p.permission
+       FROM users u JOIN user_sheet_permissions p ON p.user_id=u.id WHERE p.sheet_id=?`
+    ).bind(sheetId).all<any>(),
+    c.env.DB.prepare('SELECT * FROM sheet_notices WHERE sheet_id=? ORDER BY screen_type, sort_order').bind(sheetId).all<any>(),
+  ]);
+  return successResponse({ sheet, timeSlots: slots.results, users: users.results, notices: notices.results });
+});
+
+// PUT /api/manage/users/:id/password
+app.put('/users/:id/password', requireAuth, async (c) => {
+  const id   = parseInt(c.req.param('id'), 10);
+  const body = await c.req.json<{ password: string }>();
+  if (!body.password || body.password.length < 6) return errorResponse('VALIDATION_ERROR', 'パスワードは6文字以上です');
+  const { hashPassword } = await import('../auth');
+  const hash = await hashPassword(body.password);
+  await c.env.DB.prepare('UPDATE users SET password_hash=?, updated_at=? WHERE id=?').bind(hash, now(), id).run();
+  return successResponse({ message: 'パスワードを変更しました' });
+});
+
+// DELETE /api/manage/time-slots/:id
+app.delete('/time-slots/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  await c.env.DB.prepare("UPDATE time_slots SET status='archived', updated_at=? WHERE id=?").bind(now(), id).run();
+  return successResponse({ message: '削除しました' });
+});
+
+// DELETE /api/manage/notices/:id
+app.delete('/notices/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  await c.env.DB.prepare("UPDATE sheet_notices SET status='inactive', updated_at=? WHERE id=?").bind(now(), id).run();
+  return successResponse({ message: '削除しました' });
+});
