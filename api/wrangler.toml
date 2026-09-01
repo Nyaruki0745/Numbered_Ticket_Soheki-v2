@@ -1,0 +1,16 @@
+name = "seiriken-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "seiriken-db"
+database_id = "6491dfea-b7ba-4174-ae4e-00fb5ce36089"
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "202110e629774358987e37ab49f28a59"
+
+[triggers]
+crons = ["* * * * *"]

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>呼出モニター</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{background:#000;color:#fff;min-height:100vh;display:flex;flex-direction:column;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#header{display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.2rem;background:#0d1117;border-bottom:1px solid #21262d;flex-shrink:0}
+#header h1{font-size:.95rem;font-weight:700;color:#e6edf3}
+.poll-dot{width:7px;height:7px;border-radius:50%;background:#30363d;transition:background .3s}
+.poll-dot.active{background:#3fb950}
+
+/* ログイン */
+#login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-box{width:100%;max-width:340px;display:flex;flex-direction:column;gap:1rem}
+
+/* モニター本体 */
+#monitor-body{flex:1;display:none;flex-direction:column;padding:1.5rem;gap:1rem}
+
+/* 時間帯バー */
+#slot-bar{font-size:1rem;color:#8b949e;text-align:center;font-weight:600}
+
+/* 現在呼出 */
+#current-section{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem}
+.current-label{font-size:1.2rem;color:#58a6ff;letter-spacing:.08em;text-transform:uppercase}
+#current-number{font-family:'SFMono-Regular',Consolas,monospace;
+  font-size:clamp(4rem,15vw,9rem);font-weight:800;color:#fff;letter-spacing:.04em;line-height:1}
+#current-size{font-size:1.1rem;color:#8b949e;margin-top:.25rem}
+
+/* 次候補 */
+#next-section{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap}
+.next-item{text-align:center;min-width:120px}
+.next-item .nlabel{font-size:.75rem;color:#6e7681;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.2rem}
+.next-item .ncode{font-family:'SFMono-Regular',Consolas,monospace;font-size:1.6rem;font-weight:700;color:#58a6ff}
+
+/* 不在 */
+#absent-section{text-align:center}
+#absent-section .alabel{font-size:.72rem;color:#6e7681;letter-spacing:.06em;margin-bottom:.3rem}
+#absent-chips{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center}
+.achip{font-family:'SFMono-Regular',Consolas,monospace;font-size:.82rem;
+  padding:.15rem .5rem;background:#2a1f00;border:1px solid #d29922;
+  border-radius:4px;color:#d29922}
+
+/* 接続エラー */
+#error-bar{display:none;background:#3d1a1a;color:#f85149;text-align:center;
+  padding:.4rem;font-size:.82rem;border-top:1px solid #f85149}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>📺 呼出モニター</h1>
+  <div style="display:flex;align-items:center;gap:.6rem;font-size:.78rem;color:#8b949e">
+    <div class="poll-dot" id="poll-dot"></div>
+    <span id="poll-status">待機中</span>
+    <select id="sheet-select" style="background:#21262d;border:1px solid #30363d;color:#e6edf3;border-radius:4px;padding:.2rem .4rem;font-size:.78rem"></select>
+  </div>
+</div>
+
+<!-- ログイン（シート選択だけ） -->
+<div id="login-wrap">
+  <div class="login-box">
+    <div style="text-align:center;font-size:2rem">📺</div>
+    <h2 style="text-align:center;font-size:1.2rem">呼出モニター</h2>
+    <p style="text-align:center;font-size:.85rem;color:#8b949e">表示するシートを選択してください</p>
+    <div class="field">
+      <label>シート</label>
+      <select id="login-sheet-select" style="background:#21262d;border:1px solid #484f58;color:#e6edf3;border-radius:6px;padding:.55rem .85rem"></select>
+    </div>
+    <button class="btn btn-primary btn-lg w-full" id="btn-start">モニターを開始</button>
+  </div>
+</div>
+
+<!-- モニター本体 -->
+<div id="monitor-body">
+  <div id="slot-bar">—</div>
+  <div id="current-section">
+    <div class="current-label">呼出中</div>
+    <div id="current-number">—</div>
+    <div id="current-size"></div>
+  </div>
+  <div id="next-section"></div>
+  <div id="absent-section" style="display:none">
+    <div class="alabel">不在番号</div>
+    <div id="absent-chips"></div>
+  </div>
+</div>
+
+<div id="error-bar">通信エラー — 最終更新: <span id="last-update">—</span></div>
+
+<script type="module">
+// モニターはパスワード不要（公開API）
+// シートIDをURLパラメータから取得可能：?sheet=1
+
+const POLL_INTERVAL = 10000;
+let sheetId = null, pollTimer = null;
+
+// シート一覧はconfig.jsまたは固定値から取得
+// ここでは URLパラメータ sheet= があれば直接起動
+const urlParams = new URLSearchParams(location.search);
+const paramSheet = parseInt(urlParams.get('sheet') ?? '0', 10);
+
+async function loadSheets() {
+  // シート一覧取得の簡易実装（本来はconfig.jsやAPIから）
+  // ここでは手動入力欄として扱う
+  const sel1 = document.getElementById('login-sheet-select');
+  const sel2 = document.getElementById('sheet-select');
+
+  // URLにsheetが指定されていれば自動起動
+  if (paramSheet) {
+    sheetId = paramSheet;
+    startMonitor();
+    return;
+  }
+
+  // sheetIdの手動入力（シンプルな実装）
+  sel1.innerHTML = '<option value="">シートIDを入力してください</option>';
+  sel2.style.display = 'none';
+}
+
+document.getElementById('btn-start').onclick = () => {
+  const sel = document.getElementById('login-sheet-select');
+  const val = sel.value || prompt('シートIDを入力してください（例: 1）');
+  if (!val) return;
+  sheetId = parseInt(val, 10);
+  if (!sheetId) return;
+  startMonitor();
+};
+
+function startMonitor() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('monitor-body').style.display = 'flex';
+  document.getElementById('sheet-select').value = String(sheetId);
+  fetchAndRender();
+  pollTimer = setInterval(fetchAndRender, POLL_INTERVAL);
+}
+
+async function fetchAndRender() {
+  const dot = document.getElementById('poll-dot');
+  dot.classList.add('active');
+  try {
+    const res = await fetch(`/api/sheets/${sheetId}/call-status`);
+    const json = await res.json();
+    if (json.ok) {
+      render(json.data);
+      document.getElementById('poll-status').textContent = '接続中';
+      document.getElementById('error-bar').style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('poll-status').textContent = 'エラー';
+    document.getElementById('error-bar').style.display = 'block';
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ja-JP');
+  } finally {
+    setTimeout(() => dot.classList.remove('active'), 500);
+  }
+}
+
+function render(data) {
+  // 時間帯バー
+  document.getElementById('slot-bar').textContent = data.timeSlot
+    ? `${fmt(data.timeSlot.startAt)} 〜 ${fmt(data.timeSlot.endAt)}　${slotStatusLabel(data.slotStatus)}`
+    : '待機中';
+
+  // 現在呼出
+  document.getElementById('current-number').textContent = data.current?.ticketCode ?? '—';
+  document.getElementById('current-size').textContent   = data.current ? `${data.current.groupSize} 名` : '';
+
+  // 次候補
+  const labels = ['次', '次々', '次々次'];
+  const nexts  = [data.next, data.next2, data.next3].filter(Boolean);
+  document.getElementById('next-section').innerHTML = nexts.map((code, i) =>
+    `<div class="next-item"><div class="nlabel">${labels[i]}</div><div class="ncode">${code}</div></div>`
+  ).join('');
+
+  // 不在
+  const absentSec = document.getElementById('absent-section');
+  if (data.absentList?.length) {
+    absentSec.style.display = '';
+    document.getElementById('absent-chips').innerHTML = data.absentList.map(code =>
+      `<span class="achip">${code}</span>`).join('');
+  } else { absentSec.style.display = 'none'; }
+}
+
+function fmt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit', hour12: false });
+}
+
+function slotStatusLabel(s) {
+  return {reservation_open:'予約受付中', before_call:'呼出前', calling:'呼出中',
+    in_progress:'進行中', expiration_pending:'失効待ち', expired:'失効済'}[s] ?? '';
+}
+
+loadSheets();
+</script>
+</body>
+</html>

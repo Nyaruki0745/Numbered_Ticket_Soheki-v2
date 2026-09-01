@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>整理券予約</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{display:flex;flex-direction:column;min-height:100vh;align-items:center;justify-content:center;padding:1rem}
+.container{width:100%;max-width:440px;display:flex;flex-direction:column;gap:1.25rem}
+.logo{text-align:center;font-size:2rem;margin-bottom:.5rem}
+h1{text-align:center;font-size:1.4rem;font-weight:700}
+.slot-list{display:flex;flex-direction:column;gap:.6rem}
+.slot-card{display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:.9rem 1.1rem;cursor:pointer;transition:border-color .15s}
+.slot-card:hover:not(.disabled){border-color:var(--accent)}
+.slot-card.disabled{opacity:.45;cursor:not-allowed}
+.slot-time{font-weight:700;font-size:1rem}
+.slot-remain{font-size:.82rem;color:var(--text2)}
+.slot-remain.full{color:var(--danger)}
+#step-complete .ticket-code{font-family:var(--font-mono);font-size:2.8rem;
+  font-weight:800;color:var(--accent);text-align:center;letter-spacing:.05em;margin:1rem 0}
+.notice-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:.75rem 1rem;font-size:.85rem;color:var(--text2)}
+.step{display:none}.step.active{display:flex;flex-direction:column;gap:1rem}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">🎫</div>
+  <h1 id="page-title">整理券予約</h1>
+
+  <!-- Step 1: 時間帯選択 -->
+  <div id="step-slots" class="step active">
+    <p class="text-muted text-center">ご希望の時間帯をお選びください</p>
+    <div id="slot-list" class="slot-list"></div>
+  </div>
+
+  <!-- Step 2: 人数入力 -->
+  <div id="step-count" class="step">
+    <div id="selected-slot-info" class="card"></div>
+    <div class="field">
+      <label for="group-size">グループ人数</label>
+      <input type="number" id="group-size" min="1" max="20" value="1" inputmode="numeric">
+    </div>
+    <div id="notices-confirm" class="notice-box" style="display:none"></div>
+    <div class="flex gap-1">
+      <button class="btn btn-ghost w-full" onclick="goStep('step-slots')">← 戻る</button>
+      <button class="btn btn-primary w-full" id="btn-next-confirm">次へ確認 →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: 予約確認 -->
+  <div id="step-confirm" class="step">
+    <div id="confirm-detail" class="card"></div>
+    <div class="notice-box" style="font-size:.82rem;color:var(--warning)">
+      ⚠ 予約後の時間変更はできません
+    </div>
+    <div class="flex gap-1">
+      <button class="btn btn-ghost w-full" onclick="goStep('step-count')">← 戻る</button>
+      <button class="btn btn-success btn-lg w-full" id="btn-reserve">予約する</button>
+    </div>
+  </div>
+
+  <!-- Step 4: 完了 -->
+  <div id="step-complete" class="step">
+    <p class="text-center" style="font-size:.9rem;color:var(--text2)">予約完了 ✅</p>
+    <div class="ticket-code" id="ticket-code-display"></div>
+    <div id="complete-info" class="card text-center"></div>
+    <div id="notices-complete" class="notice-box" style="display:none"></div>
+    <button class="btn btn-ghost w-full mt-2" onclick="location.reload()">新しい予約をする</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script type="module">
+import { api, toast, genKey } from './js/api.js';
+
+const params   = new URLSearchParams(location.search);
+const sheetId  = parseInt(params.get('sheet') ?? '0', 10);
+let selectedSlot = null;
+
+async function init() {
+  if (!sheetId) { document.body.innerHTML='<p style="color:var(--danger);text-align:center;padding:2rem">シートが指定されていません</p>'; return; }
+  try {
+    const data = await api.getSheet(sheetId);
+    document.getElementById('page-title').textContent = data.sheet.name + ' 予約';
+    renderSlots(data.timeSlots);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderSlots(slots) {
+  const list = document.getElementById('slot-list');
+  if (!slots.length) { list.innerHTML='<p class="text-muted text-center">現在予約できる時間帯がありません</p>'; return; }
+  list.innerHTML = slots.map(s => `
+    <div class="slot-card ${s.isOpen ? '' : 'disabled'}" data-id="${s.id}"
+      onclick="selectSlot(${JSON.stringify(JSON.stringify(s))})">
+      <div>
+        <div class="slot-time">${fmtTime(s.startAt)} 〜 ${fmtTime(s.endAt)}</div>
+        <div class="slot-remain ${s.remainingGroups===0?'full':''}">
+          ${s.isOpen ? `残り ${s.remainingGroups} 組` : '受付終了'}
+        </div>
+      </div>
+      ${s.isOpen ? '<span style="color:var(--accent)">→</span>' : ''}
+    </div>`).join('');
+}
+
+window.selectSlot = function(jsonStr) {
+  const s = JSON.parse(jsonStr);
+  if (!s.isOpen) return;
+  selectedSlot = s;
+  document.getElementById('selected-slot-info').innerHTML =
+    `<strong>${fmtTime(s.startAt)} 〜 ${fmtTime(s.endAt)}</strong>
+     <span class="text-muted" style="margin-left:.5rem">残り ${s.remainingGroups} 組</span>`;
+  goStep('step-count');
+};
+
+document.getElementById('btn-next-confirm').onclick = () => {
+  const size = parseInt(document.getElementById('group-size').value, 10);
+  if (size < 1) { toast('人数を入力してください', 'error'); return; }
+  document.getElementById('confirm-detail').innerHTML = `
+    <div><strong>時間帯:</strong> ${fmtTime(selectedSlot.startAt)} 〜 ${fmtTime(selectedSlot.endAt)}</div>
+    <div><strong>人数:</strong> ${size} 名</div>`;
+  goStep('step-confirm');
+};
+
+document.getElementById('btn-reserve').onclick = async () => {
+  const btn  = document.getElementById('btn-reserve');
+  const size = parseInt(document.getElementById('group-size').value, 10);
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 予約中...';
+  try {
+    const data = await api.createReservation(sheetId, { timeSlotId: selectedSlot.id, groupSize: size }, genKey());
+    document.getElementById('ticket-code-display').textContent = data.reservation.ticketCode;
+    document.getElementById('complete-info').innerHTML =
+      `<div>${fmtTime(data.reservation.timeSlot.startAt)} 〜 ${fmtTime(data.reservation.timeSlot.endAt)}</div>
+       <div class="text-muted">${size} 名</div>
+       <div class="mt-1 text-muted" style="font-size:.78rem">呼出モニターをご確認ください</div>`;
+    goStep('step-complete');
+  } catch(e) {
+    toast(e.message, 'error');
+    btn.disabled = false; btn.textContent = '予約する';
+  }
+};
+
+window.goStep = function(id) {
+  document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+};
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit', hour12: false });
+}
+
+init();
+</script>
+</body>
+</html>
