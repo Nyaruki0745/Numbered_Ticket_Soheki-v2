@@ -99,7 +99,16 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <div id="toast-container"></div>
 
 <script type="module">
-import { api, toast, genKey, saveToken, clearToken, getToken } from './js/api.js';
+
+import {
+  api,
+  apiFetch,
+  toast,
+  genKey,
+  saveToken,
+  clearToken,
+  getToken
+} from './js/api.js';
 
 // ── 状態 ──────────────────────────────────────────────────
 let state = { view: 'projects', projectId: null, sheetId: null, tab: 'slots' };
@@ -107,30 +116,13 @@ let session = null;
 
 // ── APIヘルパー ────────────────────────────────────────────
 async function mget(path) {
-  const res = await fetch(`/api/manage${path}`, {
-    headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
-  return j.data;
+  return apiFetch(`/manage${path}`);
 }
-async function mpost(path, body, method='POST') {
-  const res = await fetch(`/api/manage${path}`, {
-    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-    body: JSON.stringify(body)
-  });
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
-  return j.data;
-}
-async function mdel(path) {
-  const res = await fetch(`/api/manage${path}`, {
-    method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
-  });
-  const j = await res.json();
-  if (!j.ok) throw new Error(j.error?.message ?? 'エラー');
-  return j.data;
-}
+await mpost('/projects', {
+  name,
+  description: v('f-pdesc')
+});
+await mdel(`/time-slots/${id}`);
 
 // ── ログイン ──────────────────────────────────────────────
 document.getElementById('btn-login').onclick = async () => {
