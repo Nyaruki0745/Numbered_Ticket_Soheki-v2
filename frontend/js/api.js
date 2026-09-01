@@ -1,5 +1,5 @@
 // API クライアント共通
-export const API_BASE = window.API_BASE ?? \x27\x27;
+export const API_BASE = window.API_BASE ?? '';
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('seiriken_token');
