@@ -1,5 +1,5 @@
 // API クライアント共通
-const API_BASE = 'https://seiriken-api.soheki-numberedticket.workers.dev';
+export const API_BASE = window.API_BASE ?? \x27\x27;
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('seiriken_token');
