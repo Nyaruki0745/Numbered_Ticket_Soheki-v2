@@ -258,3 +258,136 @@ app.delete('/notices/:id', requireAuth, async (c) => {
   await c.env.DB.prepare("UPDATE sheet_notices SET status='inactive', updated_at=? WHERE id=?").bind(now(), id).run();
   return successResponse({ message: '削除しました' });
 });
+
+// ─── ユーザー管理（system_admin以上） ─────────────────────────
+
+app.get('/users', requireAuth, requireSystemAdmin, async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT id,username,display_name,account_type,role,status,created_at FROM users ORDER BY created_at DESC'
+  ).all<any>();
+  return successResponse({ users: rows.results });
+});
+
+app.post('/users', requireAuth, requireSystemAdmin, async (c) => {
+  const body = await c.req.json<{ username:string; password:string; displayName:string; role?:string }>();
+  if (!body.username||!body.password||!body.displayName) return errorResponse('VALIDATION_ERROR','必須項目が不足しています');
+  if (body.password.length < 6) return errorResponse('VALIDATION_ERROR','パスワードは6文字以上です');
+  const dup = await c.env.DB.prepare('SELECT id FROM users WHERE username=?').bind(body.username).first();
+  if (dup) return errorResponse('VALIDATION_ERROR','そのユーザー名は既に使用されています');
+  const { hashPassword } = await import('../auth');
+  const hash = await hashPassword(body.password);
+  const n = now();
+  const r = await c.env.DB.prepare(
+    `INSERT INTO users (username,password_hash,account_type,display_name,role,status,created_at,updated_at)
+     VALUES (?,?,'personal',?,?,'active',?,?) RETURNING id`
+  ).bind(body.username,hash,body.displayName,body.role??'user',n,n).first<{id:number}>();
+  return successResponse({ id:r!.id }, 201);
+});
+
+app.put('/users/:id/status', requireAuth, requireSystemAdmin, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  const body = await c.req.json<{ status:string }>();
+  if (!['active','inactive'].includes(body.status)) return errorResponse('VALIDATION_ERROR','無効なステータスです');
+  await c.env.DB.prepare('UPDATE users SET status=?,updated_at=? WHERE id=?').bind(body.status,now(),id).run();
+  return successResponse({ message:'更新しました' });
+});
+
+app.get('/users/search', requireAuth, async (c) => {
+  const q = c.req.query('q')??'';
+  if (!q) return successResponse({ users:[] });
+  const rows = await c.env.DB.prepare(
+    "SELECT id,username,display_name,role FROM users WHERE (username LIKE ? OR display_name LIKE ?) AND status='active' LIMIT 10"
+  ).bind(`%${q}%`,`%${q}%`).all<any>();
+  return successResponse({ users:rows.results });
+});
+
+// ─── プロジェクト権限 ──────────────────────────────────────────
+
+app.get('/projects/:id/permissions', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  const rows = await c.env.DB.prepare(
+    `SELECT pp.id,pp.permission,u.id as user_id,u.username,u.display_name,u.role
+     FROM user_project_permissions pp JOIN users u ON u.id=pp.user_id WHERE pp.project_id=? ORDER BY pp.created_at`
+  ).bind(id).all<any>();
+  return successResponse({ permissions:rows.results });
+});
+
+app.post('/projects/:id/permissions', requireAuth, async (c) => {
+  const projectId = parseInt(c.req.param('id'),10);
+  const body = await c.req.json<{ userId:number; permission:string }>();
+  if (!body.userId||!body.permission) return errorResponse('VALIDATION_ERROR','必須項目が不足しています');
+  const ex = await c.env.DB.prepare(
+    'SELECT id FROM user_project_permissions WHERE user_id=? AND project_id=?'
+  ).bind(body.userId,projectId).first();
+  if (ex) {
+    await c.env.DB.prepare(
+      'UPDATE user_project_permissions SET permission=? WHERE user_id=? AND project_id=?'
+    ).bind(body.permission,body.userId,projectId).run();
+  } else {
+    await c.env.DB.prepare(
+      'INSERT INTO user_project_permissions (user_id,project_id,permission,created_at) VALUES (?,?,?,?)'
+    ).bind(body.userId,projectId,body.permission,now()).run();
+  }
+  return successResponse({ message:'設定しました' });
+});
+
+app.delete('/project-permissions/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  await c.env.DB.prepare('DELETE FROM user_project_permissions WHERE id=?').bind(id).run();
+  return successResponse({ message:'削除しました' });
+});
+
+app.delete('/sheet-permissions/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  await c.env.DB.prepare('DELETE FROM user_sheet_permissions WHERE id=?').bind(id).run();
+  return successResponse({ message:'削除しました' });
+});
+
+// ─── Display設定 ──────────────────────────────────────────────
+
+app.get('/projects/:id/displays', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  const rows = await c.env.DB.prepare(
+    `SELECT d.*,s.name as current_scene_name FROM display_configs d
+     LEFT JOIN scenes s ON s.id=d.current_scene_id WHERE d.project_id=? ORDER BY d.display_slot`
+  ).bind(id).all<any>();
+  return successResponse({ displays:rows.results });
+});
+
+app.post('/projects/:id/displays', requireAuth, async (c) => {
+  const projectId = parseInt(c.req.param('id'),10);
+  const body = await c.req.json<{ name:string; displaySlot:number; displayType?:string }>();
+  if (!body.name||!body.displaySlot) return errorResponse('VALIDATION_ERROR','必須項目が不足しています');
+  if (![1,2].includes(body.displaySlot)) return errorResponse('VALIDATION_ERROR','displaySlotは1または2です');
+  const dup = await c.env.DB.prepare(
+    'SELECT id FROM display_configs WHERE project_id=? AND display_slot=?'
+  ).bind(projectId,body.displaySlot).first();
+  if (dup) return errorResponse('VALIDATION_ERROR',`Display ${body.displaySlot}は既に作成済みです`);
+  const cnt = await c.env.DB.prepare('SELECT COUNT(*) as n FROM display_configs WHERE project_id=?').bind(projectId).first<{n:number}>();
+  if ((cnt?.n??0)>=2) return errorResponse('VALIDATION_ERROR','企画あたりDisplayは最大2台です');
+  const n = now();
+  const r = await c.env.DB.prepare(
+    `INSERT INTO display_configs (project_id,name,display_key,display_slot,display_type,status,created_at,updated_at)
+     VALUES (?,?,?,?,?,'active',?,?) RETURNING id`
+  ).bind(projectId,body.name,`proj-${projectId}-disp-${body.displaySlot}`,body.displaySlot,body.displayType??'monitor',n,n).first<{id:number}>();
+  return successResponse({ id:r!.id }, 201);
+});
+
+app.put('/displays/:id', requireAuth, async (c) => {
+  const id = parseInt(c.req.param('id'),10);
+  const body = await c.req.json<{ name?:string; displayType?:string; status?:string }>();
+  await c.env.DB.prepare(
+    'UPDATE display_configs SET name=COALESCE(?,name),display_type=COALESCE(?,display_type),status=COALESCE(?,status),updated_at=? WHERE id=?'
+  ).bind(body.name??null,body.displayType??null,body.status??null,now(),id).run();
+  return successResponse({ message:'更新しました' });
+});
+
+// ─── シーン一覧 ────────────────────────────────────────────────
+
+app.get('/sheets/:sheetId/scenes', requireAuth, requireSheetPermission('sheet_manager'), async (c) => {
+  const sheetId = parseInt(c.req.param('sheetId'),10);
+  const rows = await c.env.DB.prepare(
+    "SELECT id,name,description,status,sort_order,version,created_at FROM scenes WHERE sheet_id=? AND status!='archived' ORDER BY sort_order,created_at"
+  ).bind(sheetId).all<any>();
+  return successResponse({ scenes:rows.results });
+});
