@@ -3,75 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>管理画面</title>
+<title>管理画面 | 整理券システム</title>
 <link rel="stylesheet" href="css/style.css">
 <style>
 body{min-height:100vh;display:flex;flex-direction:column}
-#header{display:flex;align-items:center;justify-content:space-between;
-  padding:.6rem 1.2rem;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
-#header h1{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
-.breadcrumb{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text2)}
-.breadcrumb span{cursor:pointer;color:var(--accent)}
-.breadcrumb span:hover{text-decoration:underline}
-.sep{color:var(--text3)}
-#main{flex:1;padding:1.25rem;max-width:900px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:1rem}
+#hd{display:flex;align-items:center;gap:.75rem;padding:.55rem 1rem;
+  background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+#hd h1{font-size:.92rem;font-weight:700;white-space:nowrap}
+.bc{display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2);flex:1;min-width:0;overflow:hidden}
+.bc .cr{cursor:pointer;color:var(--accent);white-space:nowrap}
+.bc .cr:hover{text-decoration:underline}
+.bc .sep{color:var(--text3)}
+#main{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.85rem;
+  max-width:880px;margin:0 auto;width:100%}
+#login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-box{width:100%;max-width:340px;display:flex;flex-direction:column;gap:.9rem}
 
-/* ログイン */
-#login-wrap{flex:1;display:flex;align-items:center;justify-content:center}
-.login-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem}
+/* カード・セクション */
+.sec{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:.65rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)}
+.sec-hd h2{font-size:.88rem;font-weight:700}
+.sec-body{padding:.85rem 1rem;display:flex;flex-direction:column;gap:.5rem}
 
-/* セクションカード */
-.section-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
-.section-header{display:flex;align-items:center;justify-content:space-between;
-  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--bg3)}
-.section-header h2{font-size:.95rem;font-weight:700}
-.section-body{padding:1rem;display:flex;flex-direction:column;gap:.6rem}
-
-/* リストアイテム */
-.list-item{display:flex;align-items:center;justify-content:space-between;
-  padding:.65rem .9rem;background:var(--bg3);border:1px solid var(--border);
-  border-radius:var(--radius);cursor:pointer;transition:border-color .15s}
-.list-item:hover{border-color:var(--accent)}
-.list-item .title{font-weight:600;font-size:.92rem}
-.list-item .meta{font-size:.78rem;color:var(--text2);margin-top:.1rem}
-.list-item-actions{display:flex;gap:.4rem;flex-shrink:0}
+/* 行 */
+.row{display:flex;align-items:center;justify-content:space-between;
+  padding:.55rem .8rem;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);gap:.5rem}
+.row.link{cursor:pointer;transition:border-color .15s}.row.link:hover{border-color:var(--accent)}
+.rt{font-weight:600;font-size:.88rem}.rm{font-size:.74rem;color:var(--text2);margin-top:.08rem}
+.ra{display:flex;gap:.3rem;flex-shrink:0}
 
 /* タブ */
-.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1rem}
-.tab{padding:.55rem 1rem;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--text2);
-  border-bottom:2px solid transparent;transition:all .15s}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{padding:.5rem .9rem;font-size:.84rem;font-weight:600;cursor:pointer;
+  color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
 
-/* フォームモーダル */
-#modal-overlay{display:none;position:fixed;inset:0;background:#000c;z-index:200;
+/* テーブル */
+.tbl{width:100%;border-collapse:collapse;font-size:.81rem}
+.tbl th{text-align:left;padding:.32rem .5rem;color:var(--text3);
+  border-bottom:1px solid var(--border);font-weight:600;font-size:.74rem}
+.tbl td{padding:.42rem .5rem;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+
+/* バッジ */
+.pb{font-size:.69rem;padding:.1rem .4rem;border-radius:999px;border:1px solid var(--border2);color:var(--text2);background:var(--bg3)}
+.pb.staff{color:#79c0ff;border-color:#1f4580}
+.pb.sheet_manager{color:var(--success);border-color:#1a3d2a}
+.pb.project_manager{color:#f78166;border-color:#5e1a1a}
+.pb.on{color:var(--success);border-color:#1a3d2a}
+.pb.off{color:var(--text3)}
+
+/* グリッド */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem}
+
+/* モーダル */
+#mbg{display:none;position:fixed;inset:0;background:#000c;z-index:300;
   align-items:center;justify-content:center;padding:1rem}
-#modal-overlay.open{display:flex}
-.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);
-  width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:1.5rem;
-  display:flex;flex-direction:column;gap:1rem}
-.modal-box h3{font-size:1.05rem;font-weight:700}
-.modal-footer{display:flex;gap:.6rem;justify-content:flex-end;margin-top:.5rem}
+#mbg.open{display:flex}
+.mbox{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);
+  width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+  padding:1.4rem;display:flex;flex-direction:column;gap:.9rem}
+.mbox h3{font-size:.97rem;font-weight:700}
+.mfoot{display:flex;justify-content:flex-end;gap:.5rem;padding-top:.3rem}
+.hint{font-size:.73rem;color:var(--text3);margin-top:.12rem}
+.info-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
+  padding:.55rem .8rem;font-size:.77rem;color:var(--text2)}
 
-/* 時間帯テーブル */
-.time-table{width:100%;border-collapse:collapse;font-size:.85rem}
-.time-table th{text-align:left;padding:.4rem .6rem;color:var(--text2);
-  border-bottom:1px solid var(--border);font-size:.78rem;font-weight:600}
-.time-table td{padding:.5rem .6rem;border-bottom:1px solid var(--border)}
-.time-table tr:last-child td{border-bottom:none}
+/* ステータスバッジ */
+.st{display:inline-block;font-size:.69rem;padding:.1rem .4rem;border-radius:999px;border:1px solid var(--border2)}
+.st.active{color:var(--success);border-color:#1a3d2a}
+.st.inactive,.st.archived,.st.suspended{color:var(--text3)}
+.st.draft{color:var(--warning);border-color:#3d2e00}
 
-/* スタッフバッジ */
-.perm-badge{font-size:.72rem;padding:.15rem .5rem;border-radius:999px;
-  background:var(--bg3);border:1px solid var(--border2);color:var(--text2)}
-.perm-badge.staff{color:var(--accent);border-color:var(--accent-dim)}
-.perm-badge.sheet_manager{color:var(--success);border-color:#1a3d2a}
+/* ナビリンク */
+.nav-link{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .85rem;
+  border-radius:var(--radius);font-size:.83rem;font-weight:600;cursor:pointer;
+  color:var(--text2);border:1px solid var(--border2);transition:all .15s}
+.nav-link:hover{color:var(--text);border-color:var(--accent)}
+.nav-link.danger{color:var(--danger);border-color:var(--danger)}
 </style>
 </head>
 <body>
 
-<div id="header">
-  <h1>⚙️ 管理画面</h1>
-  <div class="flex gap-1" style="align-items:center">
-    <div class="breadcrumb" id="breadcrumb"></div>
+<div id="hd">
+  <h1>⚙️ 管理</h1>
+  <div class="bc" id="bc"></div>
+  <div class="flex gap-1" style="flex-shrink:0;align-items:center">
+    <span id="me-label" class="text-muted" style="font-size:.75rem;display:none"></span>
     <button class="btn btn-ghost btn-sm" id="btn-logout" style="display:none">ログアウト</button>
   </div>
 </div>
@@ -80,11 +100,14 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <div id="login-wrap">
   <div class="login-box card">
     <div style="text-align:center;font-size:1.8rem">⚙️</div>
-    <h2 style="text-align:center">管理者ログイン</h2>
-    <div class="field"><label>ユーザー名</label><input id="login-user" autocomplete="username"></div>
-    <div class="field"><label>パスワード</label><input id="login-pass" type="password"></div>
+    <h2 style="text-align:center;font-size:1.05rem;font-weight:700">管理者ログイン</h2>
+    <div class="field"><label>ユーザー名</label><input id="lu" autocomplete="username"></div>
+    <div class="field"><label>パスワード</label><input id="lp" type="password" autocomplete="current-password"></div>
     <button class="btn btn-primary btn-lg w-full" id="btn-login">ログイン</button>
-    <p id="login-err" class="text-danger text-center" style="min-height:1.2em;font-size:.85rem"></p>
+    <p id="lerr" class="text-danger text-center" style="min-height:1.1em;font-size:.82rem"></p>
+    <p style="font-size:.74rem;color:var(--text3);text-align:center">
+      初回のみ: <code style="font-size:.78rem">POST /api/setup/init-admin</code> でアカウントを作成できます
+    </p>
   </div>
 </div>
 
@@ -92,393 +115,602 @@ body{min-height:100vh;display:flex;flex-direction:column}
 <div id="main" style="display:none"></div>
 
 <!-- モーダル -->
-<div id="modal-overlay">
-  <div class="modal-box" id="modal-box"></div>
-</div>
+<div id="mbg"><div class="mbox" id="mbox"></div></div>
 
 <div id="toast-container"></div>
-
 <script type="module">
-
-import {
-  api,
-  apiFetch,
-  toast,
-  genKey,
-  saveToken,
-  clearToken,
-  getToken
-} from './js/api.js';
+import { api, toast, saveToken, clearToken, getToken, API_BASE } from './js/api.js';
 
 // ── 状態 ──────────────────────────────────────────────────
-let state = { view: 'projects', projectId: null, sheetId: null, tab: 'slots' };
-let session = null;
+let S = { view:'home', projectId:null, projectName:'', sheetId:null, sheetName:'', tab:'sheets' };
+let me = null;
 
-// ── APIヘルパー ────────────────────────────────────────────
-async function mget(path) {
-  return apiFetch(`/manage${path}`);
-}
-
-async function mpost(path, body, method = 'POST', idempotencyKey) {
-  return apiFetch(`/manage${path}`, {
+// ── API ───────────────────────────────────────────────────
+async function mf(path, opts={}) {
+  const method = opts.method ?? 'GET';
+  const res = await fetch(`${API_BASE}/api/manage${path}`, {
     method,
-    body: JSON.stringify(body),
-    ...(idempotencyKey ? { idempotencyKey } : {}),
+    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${getToken()}` },
+    ...(opts.body ? { body:JSON.stringify(opts.body) } : {}),
   });
+  if (res.status === 204) return {};
+  const j = await res.json();
+  if (!j.ok) throw Object.assign(new Error(j.error?.message ?? 'APIエラー'), { code:j.error?.code });
+  return j.data;
 }
-
-async function mdel(path) {
-  return apiFetch(`/manage${path}`, {
-    method: 'DELETE',
-  });
-}
+const mget  = p    => mf(p);
+const mpost = (p,b)=> mf(p,{method:'POST',body:b});
+const mput  = (p,b)=> mf(p,{method:'PUT',body:b});
+const mdel  = p    => mf(p,{method:'DELETE'});
 
 // ── ログイン ──────────────────────────────────────────────
-document.getElementById('btn-login').onclick = async () => {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const err = document.getElementById('login-err');
-  err.textContent = '';
-  const btn = document.getElementById('btn-login');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+document.getElementById('btn-login').onclick = doLogin;
+document.getElementById('lp').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+async function doLogin() {
+  const u=val('lu'), p=val('lp');
+  document.getElementById('lerr').textContent='';
+  if(!u||!p){document.getElementById('lerr').textContent='入力してください';return;}
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
   try {
-    const data = await api.login(u, p);
-    saveToken(data.token);
-    session = data.user;
-    document.getElementById('login-wrap').style.display = 'none';
-    document.getElementById('main').style.display = 'flex';
-    document.getElementById('btn-logout').style.display = '';
-    renderView();
+    const d = await api.login(u,p);
+    saveToken(d.token); me=d.user;
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('main').style.display='flex';
+    document.getElementById('btn-logout').style.display='';
+    document.getElementById('me-label').style.display='';
+    document.getElementById('me-label').textContent=`${d.user.displayName}（${roleLabel(d.user.role)}）`;
+    render();
   } catch(e) {
-    err.textContent = e.message;
-  } finally { btn.disabled = false; btn.textContent = 'ログイン'; }
-};
-document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btn-login').click(); });
-
+    document.getElementById('lerr').textContent = e.code==='INVALID_CREDENTIALS'?'ユーザー名またはパスワードが違います':e.message;
+  } finally { btn.disabled=false; btn.textContent='ログイン'; }
+}
 document.getElementById('btn-logout').onclick = async () => {
-  try { await api.logout(); } catch(_) {}
+  try{await api.logout();}catch(_){}
   clearToken(); location.reload();
 };
 
-// ── ルーティング ───────────────────────────────────────────
-async function renderView() {
-  updateBreadcrumb();
-  const main = document.getElementById('main');
-  main.innerHTML = '<p style="color:var(--text2)">読み込み中...</p>';
+// ── ルーター ──────────────────────────────────────────────
+async function render() {
+  updateBC();
+  const m=document.getElementById('main');
+  m.innerHTML='<p class="text-muted">読み込み中...</p>';
   try {
-    if (state.view === 'projects') await renderProjects(main);
-    else if (state.view === 'project')  await renderProject(main);
-    else if (state.view === 'sheet')    await renderSheet(main);
-  } catch(e) {
-    main.innerHTML = `<p class="text-danger">${e.message}</p>`;
-  }
+    if(S.view==='home')    await vHome(m);
+    else if(S.view==='sys')     await vSystem(m);
+    else if(S.view==='project') await vProject(m);
+    else if(S.view==='sheet')   await vSheet(m);
+  } catch(e) { m.innerHTML=`<p class="text-danger">❌ ${esc(e.message)}</p>`; }
+}
+function nav(view,extra={}){ S={...S,view,...extra}; render(); }
+window.goHome    = ()=> nav('home',{projectId:null,sheetId:null,tab:'sheets'});
+window.goSys     = ()=> nav('sys');
+window.goProject = ()=> nav('project',{sheetId:null,tab:'sheets'});
+window.openProject = (id,name)=> nav('project',{projectId:id,projectName:name,sheetId:null,tab:'sheets'});
+window.openSheet   = (id,name)=> nav('sheet',{sheetId:id,sheetName:name,tab:'slots'});
+window.switchTab   = t=> { S.tab=t; render(); };
+
+function updateBC() {
+  const el=document.getElementById('bc');
+  const p=[`<span class="cr" onclick="goHome()">企画一覧</span>`];
+  if(S.view==='sys') p.push('<span class="sep">›</span><span>システム管理</span>');
+  if(S.view==='project'||S.view==='sheet') p.push(`<span class="sep">›</span><span class="cr" onclick="goProject()">${esc(S.projectName)}</span>`);
+  if(S.view==='sheet') p.push(`<span class="sep">›</span><span>${esc(S.sheetName)}</span>`);
+  el.innerHTML=p.join('');
 }
 
-window.goProjects = function() {
-  state = { view:'projects', projectId:null, sheetId:null, tab:'slots' };
-  renderView();
-};
-
-window.goProject = function(id) {
-  state = { ...state, view:'project', projectId:id, sheetId:null };
-  renderView();
-};
-
-window.goSheet = function(id) {
-  state = { ...state, view:'sheet', sheetId:id };
-  renderView();
-};
-
-function updateBreadcrumb() {
-  const el = document.getElementById('breadcrumb');
-  const parts = [`<span onclick="goProjects()">企画一覧</span>`];
-  if (state.view === 'project' || state.view === 'sheet') parts.push('<span class="sep">›</span>', `<span onclick="goProject(${state.projectId})">企画</span>`);
-  if (state.view === 'sheet') parts.push('<span class="sep">›</span>', `<span>シート</span>`);
-  el.innerHTML = parts.join('');
-}
-
-// ── 企画一覧 ──────────────────────────────────────────────
-async function renderProjects(el) {
-  const data = await mget('/projects');
-  el.innerHTML = `
-    <div class="section-card">
-      <div class="section-header">
-        <h2>企画一覧</h2>
-        <button class="btn btn-primary btn-sm" onclick="showCreateProject()">+ 企画作成</button>
-      </div>
-      <div class="section-body">
-        ${data.projects.length === 0 ? '<p class="text-muted">企画がありません</p>' :
-          data.projects.map(p => `
-            <div class="list-item" onclick="goProject(${p.id})">
-              <div>
-                <div class="title">${esc(p.name)}</div>
-                <div class="meta">${esc(p.description??'')} ・ ${statusLabel(p.status)}</div>
-              </div>
-              <span style="color:var(--accent)">→</span>
-            </div>`).join('')}
+// ── ホーム（企画一覧） ─────────────────────────────────────
+async function vHome(el) {
+  const {projects} = await mget('/projects');
+  const isAdmin = me && (me.role==='system_admin'||me.role==='developer');
+  el.innerHTML=`
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      ${isAdmin?`<span class="nav-link" onclick="goSys()">👤 システム管理</span>`:''}
+      ${isAdmin?`<span class="nav-link" onclick="mCreateProject()">＋ 企画作成</span>`:''}
+    </div>
+    <div class="sec">
+      <div class="sec-hd"><h2>企画一覧</h2></div>
+      <div class="sec-body">
+        ${!projects.length?'<p class="text-muted">企画がありません</p>':
+          projects.map(p=>`
+          <div class="row link" onclick="openProject(${p.id},'${esc(p.name)}')">
+            <div><div class="rt">${esc(p.name)}</div>
+              <div class="rm">${esc(p.description??'')} <span class="st ${p.status}">${stLabel(p.status)}</span></div></div>
+            <span style="color:var(--accent)">→</span>
+          </div>`).join('')}
       </div>
     </div>`;
 }
+window.mCreateProject = ()=> modal('企画を作成',`
+  <div class="field"><label>企画名 *</label><input id="f-pn" placeholder="1組 お化け屋敷"></div>
+  <div class="field"><label>説明（任意）</label><input id="f-pd" placeholder="説明"></div>`,
+  async()=>{
+    const name=val('f-pn'); if(!name){toast('企画名は必須です','error');return false;}
+    await mpost('/projects',{name,description:val('f-pd')||null});
+    toast('企画を作成しました','success');return true;
+  }, render);
 
-window.showCreateProject = () => showModal('企画作成', `
-  <div class="field"><label>企画名 *</label><input id="f-pname" placeholder="1組 お化け屋敷"></div>
-  <div class="field"><label>説明</label><input id="f-pdesc" placeholder="任意"></div>`,
-  async () => {
-    const name = v('f-pname');
-    if (!name) { toast('企画名は必須です','error'); return false; }
-    await mpost('/projects', { name, description: v('f-pdesc') });
-    toast('企画を作成しました','success'); return true;
-  }, renderView
-);
-
-// ── 企画詳細（シート一覧） ────────────────────────────────
-async function renderProject(el) {
-  const data = await mget(`/projects/${state.projectId}`);
-  el.innerHTML = `
-    <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between">
-      <div><strong>${esc(data.project.name)}</strong><span class="text-muted" style="margin-left:.5rem">${statusLabel(data.project.status)}</span></div>
+// ── システム管理（ユーザー一覧） ───────────────────────────
+async function vSystem(el) {
+  const {users} = await mget('/users');
+  el.innerHTML=`
+    <div style="display:flex;gap:.5rem">
+      <span class="nav-link" onclick="mCreateUser()">＋ ユーザー作成</span>
     </div>
-    <div class="section-card">
-      <div class="section-header">
-        <h2>シート一覧</h2>
-        <button class="btn btn-primary btn-sm" onclick="showCreateSheet()">+ シート作成</button>
-      </div>
-      <div class="section-body">
-        ${data.sheets.length === 0 ? '<p class="text-muted">シートがありません</p>' :
-          data.sheets.map(s => `
-            <div class="list-item" onclick="goSheet(${s.id})">
-              <div>
-                <div class="title">${esc(s.name)}</div>
-                <div class="meta">プレフィックス: ${esc(s.ticket_prefix)} ・ ${statusLabel(s.status)}</div>
-              </div>
-              <span style="color:var(--accent)">→</span>
-            </div>`).join('')}
+    <div class="sec">
+      <div class="sec-hd"><h2>全ユーザー一覧（${users.length}名）</h2></div>
+      <div class="sec-body">
+        ${!users.length?'<p class="text-muted">ユーザーがいません</p>':
+          users.map(u=>`
+          <div class="row">
+            <div>
+              <div class="rt">${esc(u.display_name)} <span class="pb ${u.status==='active'?'on':'off'}">${u.status==='active'?'有効':'無効'}</span></div>
+              <div class="rm">@${esc(u.username)} ／ ${roleLabel(u.role)} ／ ${u.account_type==='shared'?'共有':'個人'}</div>
+            </div>
+            <div class="ra">
+              <button class="btn btn-ghost btn-sm" onclick="mChangePw(${u.id},'${esc(u.display_name)}')">PW変更</button>
+              ${u.status==='active'
+                ?`<button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},'inactive')">無効化</button>`
+                :me?.role==='developer'||me?.role==='system_admin'?`<button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},'active')">有効化</button>`:''}
+            </div>
+          </div>`).join('')}
       </div>
     </div>`;
 }
-
-window.showCreateSheet = () => showModal('シート作成', `
-  <div class="field"><label>シート名 *</label><input id="f-sname" placeholder="A1（1日目）"></div>
-  <div class="field"><label>整理券プレフィックス * （英大文字2〜4文字）</label><input id="f-spfx" placeholder="A01" maxlength="4" style="text-transform:uppercase"></div>
-  <div class="field"><label>連番桁数</label><input id="f-sdigs" type="number" value="4" min="3" max="6"></div>`,
-  async () => {
-    const name = v('f-sname'), pfx = v('f-spfx').toUpperCase(), digs = parseInt(v('f-sdigs')||'4');
-    if (!name || !pfx) { toast('シート名・プレフィックスは必須です','error'); return false; }
-    await mpost(`/projects/${state.projectId}/sheets`, { name, ticketPrefix: pfx, ticketDigits: digs });
-    toast('シートを作成しました','success'); return true;
-  }, renderView
-);
-
-// ── シート詳細 ────────────────────────────────────────────
-async function renderSheet(el) {
-  const data = await mget(`/sheets/${state.sheetId}/detail`);
-  const tabNames = { slots:'時間帯', staff:'スタッフ', notices:'注意事項' };
-  el.innerHTML = `
-    <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <strong>${esc(data.sheet.name)}</strong>
-        <span class="text-muted" style="margin-left:.5rem">プレフィックス: ${esc(data.sheet.ticket_prefix)}</span>
-      </div>
-      <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
-        <input type="checkbox" ${data.sheet.entry_enabled?'checked':''} onchange="toggleEntry(${data.sheet.id},this.checked)"> 入場管理
-      </label>
-    </div>
-    <div class="section-card">
-      <div class="tabs">
-        ${Object.entries(tabNames).map(([k,v]) =>
-          `<div class="tab ${state.tab===k?'active':''}" onclick="switchTab('${k}')">${v}（${k==='slots'?data.timeSlots.length:k==='staff'?data.users.length:data.notices.length}）</div>`
-        ).join('')}
-      </div>
-      <div style="padding:0 1rem 1rem" id="tab-content">
-        ${state.tab==='slots'   ? renderSlots(data.timeSlots)   :
-          state.tab==='staff'   ? renderStaff(data.users)        :
-                                  renderNotices(data.notices)}
-      </div>
-    </div>`;
-}
-
-window.switchTab = (tab) => { state.tab = tab; renderView(); };
-window.toggleEntry = async (id, v) => {
-  await mpost(`/sheets/${id}`, { entryEnabled: v }, 'PUT');
-  toast('更新しました','success');
-};
-
-// ── 時間帯タブ ────────────────────────────────────────────
-function renderSlots(slots) {
-  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateSlot()">+ 時間帯追加</button>`;
-  if (!slots.length) return addBtn + '<p class="text-muted">時間帯がありません</p>';
-  return addBtn + `
-    <table class="time-table">
-      <thead><tr><th>名前</th><th>時間帯</th><th>定員</th><th>呼出</th><th>失効</th><th></th></tr></thead>
-      <tbody>
-        ${slots.map(s => `<tr>
-          <td>${esc(s.name)}</td>
-          <td>${fmtDT(s.start_at)}〜${fmtT(s.end_at)}</td>
-          <td>${s.capacity_groups}組</td>
-          <td>${fmtT(s.call_start_at)}〜${fmtT(s.call_end_at)}</td>
-          <td>${fmtT(s.expire_at)}</td>
-          <td><button class="btn btn-danger btn-sm" onclick="deleteSlot(${s.id})">削除</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-window.showCreateSlot = () => {
-  const today = new Date().toISOString().slice(0,10);
-  showModal('時間帯追加', `
-    <div class="field"><label>時間帯名 *</label><input id="f-tname" placeholder="13:00〜13:30の部"></div>
-    <div class="field"><label>開催日 *</label><input id="f-tdate" type="date" value="${today}"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-      <div class="field"><label>開始時刻 *</label><input id="f-tstart" type="time" value="13:00"></div>
-      <div class="field"><label>終了時刻 *</label><input id="f-tend" type="time" value="13:30"></div>
-    </div>
-    <div class="field"><label>定員（グループ数） *</label><input id="f-tcap" type="number" min="1" value="10"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
-      <div class="field"><label>呼出開始 *</label><input id="f-tcallstart" type="time" value="12:55"></div>
-      <div class="field"><label>呼出終了 *</label><input id="f-tcallend" type="time" value="13:30"></div>
-      <div class="field"><label>失効時刻 *</label><input id="f-texpire" type="time" value="13:35"></div>
-    </div>
-    <p class="text-muted" style="font-size:.78rem">※ 呼出開始は通常「開始5分前」、失効は「終了5分後」が目安です</p>`,
-    async () => {
-      const name=v('f-tname'), date=v('f-tdate');
-      const ts=v('f-tcallstart'), te=v('f-tcallend'), tx=v('f-texpire');
-      const ss=v('f-tstart'), se=v('f-tend');
-      const cap=parseInt(v('f-tcap')||'0');
-      if (!name||!date||!ss||!se||!cap) { toast('必須項目を入力してください','error'); return false; }
-      const toISO = (d,t) => new Date(`${d}T${t}:00`).toISOString();
-      await mpost(`/sheets/${state.sheetId}/time-slots`, {
-        name, startAt: toISO(date,ss), endAt: toISO(date,se), capacityGroups: cap,
-        callStartAt: toISO(date,ts), callEndAt: toISO(date,te), expireAt: toISO(date,tx),
-      });
-      toast('時間帯を追加しました','success'); return true;
-    }, renderView
-  );
-};
-
-window.deleteSlot = async (id) => {
-  if (!confirm('この時間帯を削除しますか？予約がある場合は影響があります。')) return;
-  await mdel(`/time-slots/${id}`);
-  toast('削除しました','success'); renderView();
-};
-
-// ── スタッフタブ ──────────────────────────────────────────
-function renderStaff(users) {
-  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateStaff()">+ スタッフ追加</button>`;
-  if (!users.length) return addBtn + '<p class="text-muted">スタッフがいません</p>';
-  return addBtn + users.map(u => `
-    <div class="list-item">
-      <div>
-        <div class="title">${esc(u.display_name)} <span class="perm-badge ${u.permission}">${permLabel(u.permission)}</span></div>
-        <div class="meta">@${esc(u.username)} ・ ${u.account_type==='shared'?'共有アカウント':'個人'}</div>
-      </div>
-      <div class="list-item-actions">
-        <button class="btn btn-ghost btn-sm" onclick="showChangePass(${u.id},'${esc(u.display_name)}')">PW変更</button>
-      </div>
-    </div>`).join('');
-}
-
-window.showCreateStaff = () => showModal('スタッフアカウント作成', `
-  <div class="field"><label>表示名 *</label><input id="f-udname" placeholder="A01スタッフ"></div>
-  <div class="field"><label>ユーザー名 * （ログインID）</label><input id="f-uname" placeholder="a01_staff" autocomplete="off"></div>
-  <div class="field"><label>パスワード *（6文字以上）</label><input id="f-upass" type="password" autocomplete="new-password"></div>
-  <div class="field"><label>権限</label>
-    <select id="f-uperm">
-      <option value="staff">スタッフ（受付・呼出のみ）</option>
-      <option value="sheet_manager">シート管理者（設定変更可）</option>
+window.mCreateUser = ()=> modal('ユーザーを作成',`
+  <div class="field"><label>表示名 *</label><input id="f-udn" placeholder="企画管理者A"></div>
+  <div class="field"><label>ユーザー名 *</label><input id="f-uun" placeholder="manager_a" autocomplete="off"></div>
+  <div class="field"><label>パスワード *（8文字以上）</label><input id="f-upw" type="password" autocomplete="new-password"></div>
+  <div class="field"><label>システム権限</label>
+    <select id="f-ur">
+      <option value="user">user（スコープ権限で管理）</option>
+      <option value="system_admin">system_admin（全体管理者）</option>
     </select>
   </div>`,
-  async () => {
-    const dn=v('f-udname'), un=v('f-uname'), pw=v('f-upass'), pm=v('f-uperm');
-    if (!dn||!un||!pw) { toast('必須項目を入力してください','error'); return false; }
-    if (pw.length < 6) { toast('パスワードは6文字以上です','error'); return false; }
-    await mpost(`/sheets/${state.sheetId}/users`, { displayName:dn, username:un, password:pw, permission:pm, accountType:'shared' });
-    toast('スタッフを追加しました','success'); return true;
-  }, renderView
-);
+  async()=>{
+    const dn=val('f-udn'),un=val('f-uun'),pw=val('f-upw');
+    if(!dn||!un||!pw){toast('必須項目を入力してください','error');return false;}
+    if(pw.length<8){toast('パスワードは8文字以上です','error');return false;}
+    await mpost('/users',{displayName:dn,username:un,password:pw,role:val('f-ur')});
+    toast('ユーザーを作成しました','success');return true;
+  }, render);
+window.toggleUser = async(id,status)=>{
+  if(!confirm(`このユーザーを${status==='active'?'有効化':'無効化'}しますか？`))return;
+  try{await mput(`/users/${id}/status`,{status});toast('更新しました','info');render();}
+  catch(e){toast(e.message,'error');}
+};
 
-window.showChangePass = (id, name) => showModal(`パスワード変更: ${name}`, `
-  <div class="field"><label>新しいパスワード *（6文字以上）</label><input id="f-newpass" type="password" autocomplete="new-password"></div>`,
-  async () => {
-    const pw = v('f-newpass');
-    if (!pw || pw.length < 6) { toast('6文字以上で入力してください','error'); return false; }
-    await mpost(`/users/${id}/password`, { password: pw }, 'PUT');
-    toast('パスワードを変更しました','success'); return true;
-  }, () => {}
-);
-
-// ── 注意事項タブ ──────────────────────────────────────────
-function renderNotices(notices) {
-  const addBtn = `<button class="btn btn-primary btn-sm mb-1" onclick="showCreateNotice()">+ 注意事項追加</button>`;
-  if (!notices.length) return addBtn + '<p class="text-muted">注意事項がありません</p>';
-  return addBtn + notices.map(n => `
-    <div class="list-item">
-      <div>
-        <div class="title" style="font-size:.85rem">${screenLabel(n.screen_type)} ${n.title?'・'+esc(n.title):''}</div>
-        <div class="meta">${esc(n.body).slice(0,60)}${n.body.length>60?'...':''}</div>
+// ── 企画詳細 ──────────────────────────────────────────────
+async function vProject(el) {
+  const {project,sheets} = await mget(`/projects/${S.projectId}`);
+  S.projectName=project.name;
+  const tabs = [{k:'sheets',l:`シート（${sheets.length}）`},{k:'perms',l:'権限管理'},{k:'displays',l:'Display設定'}];
+  el.innerHTML=`
+    <div class="card" style="padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+      <div><strong>${esc(project.name)}</strong>
+        <span class="st ${project.status}" style="margin-left:.4rem">${stLabel(project.status)}</span>
+        ${project.description?`<span class="rm" style="margin-left:.4rem">${esc(project.description)}</span>`:''}
       </div>
-      <button class="btn btn-danger btn-sm" onclick="deleteNotice(${n.id})">削除</button>
-    </div>`).join('');
+      <div class="ra">
+        <button class="btn btn-ghost btn-sm" onclick="mEditProject(${project.id},'${esc(project.name)}','${esc(project.description??'')}','${project.status}')">編集</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="tabs">${tabs.map(t=>`<div class="tab ${S.tab===t.k?'on':''}" onclick="switchTab('${t.k}')">${t.l}</div>`).join('')}</div>
+      <div style="padding:.85rem 1rem" id="tab-body">
+        ${S.tab==='sheets'   ? renderSheets(sheets)
+        : S.tab==='perms'    ? '読み込み中...'
+        : /* displays */       '読み込み中...'}
+      </div>
+    </div>`;
+  if(S.tab==='perms')    loadPerms();
+  if(S.tab==='displays') loadDisplays();
 }
 
-window.showCreateNotice = () => showModal('注意事項追加', `
+window.mEditProject = (id,name,desc,status)=> modal('企画を編集',`
+  <div class="field"><label>企画名 *</label><input id="f-epn" value="${esc(name)}"></div>
+  <div class="field"><label>説明</label><input id="f-epd" value="${esc(desc)}"></div>
+  <div class="field"><label>ステータス</label>
+    <select id="f-eps">
+      ${['draft','active','suspended','archived'].map(s=>`<option value="${s}" ${s===status?'selected':''}>${stLabel(s)}</option>`).join('')}
+    </select>
+  </div>`,
+  async()=>{
+    const name=val('f-epn');if(!name){toast('企画名は必須です','error');return false;}
+    await mput(`/projects/${id}`,{name,description:val('f-epd')||null,status:val('f-eps')});
+    toast('更新しました','success');return true;
+  }, render);
+
+// シート一覧タブ
+function renderSheets(sheets) {
+  return `<div style="display:flex;gap:.5rem;margin-bottom:.6rem">
+    <button class="btn btn-primary btn-sm" onclick="mCreateSheet()">＋ シート作成</button>
+  </div>`+
+  (!sheets.length?'<p class="text-muted">シートがありません</p>':
+    sheets.map(s=>`
+    <div class="row link" onclick="openSheet(${s.id},'${esc(s.name)}')">
+      <div><div class="rt">${esc(s.name)}</div>
+        <div class="rm">プレフィックス: <strong>${esc(s.ticket_prefix)}</strong>-（${s.ticket_digits}桁）
+        ／ 入場管理: ${s.entry_enabled?'ON':'OFF'}
+        <span class="st ${s.status}" style="margin-left:.3rem">${stLabel(s.status)}</span></div></div>
+      <span style="color:var(--accent)">→</span>
+    </div>`).join(''));
+}
+window.mCreateSheet = ()=> modal('シートを作成',`
+  <div class="field"><label>シート名 *</label><input id="f-sn" placeholder="A1（1日目）"></div>
+  <div class="g2">
+    <div class="field"><label>プレフィックス *</label><input id="f-sp" placeholder="A01" maxlength="4" style="text-transform:uppercase">
+      <p class="hint">英大文字・数字2〜4文字</p></div>
+    <div class="field"><label>桁数</label>
+      <select id="f-sd"><option value="3">3桁（〜999）</option><option value="4" selected>4桁（〜9999）</option><option value="5">5桁（〜99999）</option></select></div>
+  </div>`,
+  async()=>{
+    const name=val('f-sn'),pfx=val('f-sp').toUpperCase();
+    if(!name||!pfx){toast('シート名・プレフィックスは必須です','error');return false;}
+    if(!/^[A-Z0-9]{2,4}$/.test(pfx)){toast('プレフィックスは英大文字・数字2〜4文字です','error');return false;}
+    await mpost(`/projects/${S.projectId}/sheets`,{name,ticketPrefix:pfx,ticketDigits:parseInt(val('f-sd'))});
+    toast('シートを作成しました','success');return true;
+  }, render);
+
+// 権限タブ
+async function loadPerms() {
+  try{
+    const {permissions} = await mget(`/projects/${S.projectId}/permissions`);
+    document.getElementById('tab-body').innerHTML=renderPerms(permissions);
+  }catch(e){document.getElementById('tab-body').innerHTML=`<p class="text-danger">${esc(e.message)}</p>`;}
+}
+function renderPerms(perms) {
+  return `<div style="display:flex;gap:.5rem;margin-bottom:.6rem">
+    <button class="btn btn-primary btn-sm" onclick="mAddPerm()">＋ 権限を追加</button>
+  </div>
+  <div class="info-box mb-1">企画管理者（project_manager）はこの企画の全シートを管理できます。</div>`+
+  (!perms.length?'<p class="text-muted">権限が設定されていません</p>':
+    perms.map(p=>`
+    <div class="row">
+      <div><div class="rt">${esc(p.display_name)} <span class="pb project_manager">${permLabel(p.permission)}</span></div>
+        <div class="rm">@${esc(p.username)} ／ ${roleLabel(p.role)}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="delProjPerm(${p.id})">削除</button>
+    </div>`).join(''));
+}
+window.mAddPerm = ()=> modal('プロジェクト権限を追加',`
+  <div class="field"><label>ユーザー名で検索 *</label>
+    <div style="display:flex;gap:.4rem">
+      <input id="f-usq" placeholder="username" style="flex:1">
+      <button class="btn btn-ghost btn-sm" onclick="searchUser()">検索</button>
+    </div>
+  </div>
+  <div id="user-results" style="display:flex;flex-direction:column;gap:.35rem"></div>
+  <div class="field"><label>付与する権限</label>
+    <select id="f-pp"><option value="project_manager">project_manager（企画管理者）</option><option value="viewer">viewer（閲覧のみ）</option></select>
+  </div>
+  <input type="hidden" id="f-uid" value="">
+  <p id="selected-user" class="hint"></p>`,
+  async()=>{
+    const uid=parseInt(val('f-uid')||'0');
+    if(!uid){toast('ユーザーを選択してください','error');return false;}
+    await mpost(`/projects/${S.projectId}/permissions`,{userId:uid,permission:val('f-pp')});
+    toast('権限を設定しました','success');return true;
+  }, ()=>{ S.tab='perms'; render(); });
+window.searchUser = async()=>{
+  const q=val('f-usq');if(!q)return;
+  try{
+    const {users}=await mf(`/users/search?q=${encodeURIComponent(q)}`);
+    const el=document.getElementById('user-results');
+    el.innerHTML=!users.length?'<p class="hint">見つかりませんでした</p>':
+      users.map(u=>`<div class="row" style="cursor:pointer" onclick="selectUser(${u.id},'${esc(u.display_name)}','${esc(u.username)}')">
+        <div><div class="rt">${esc(u.display_name)}</div><div class="rm">@${esc(u.username)}</div></div>
+        <span style="color:var(--accent)">選択</span>
+      </div>`).join('');
+  }catch(e){toast(e.message,'error');}
+};
+window.selectUser=(id,dn,un)=>{
+  document.getElementById('f-uid').value=id;
+  document.getElementById('selected-user').textContent=`選択中: ${dn}（@${un}）`;
+  document.getElementById('user-results').innerHTML='';
+};
+window.delProjPerm = async(id)=>{
+  if(!confirm('この権限を削除しますか？'))return;
+  try{await mdel(`/project-permissions/${id}`);toast('削除しました','success');S.tab='perms';render();}
+  catch(e){toast(e.message,'error');}
+};
+
+// Displayタブ
+async function loadDisplays() {
+  try{
+    const {displays}=await mget(`/projects/${S.projectId}/displays`);
+    document.getElementById('tab-body').innerHTML=renderDisplays(displays);
+  }catch(e){document.getElementById('tab-body').innerHTML=`<p class="text-danger">${esc(e.message)}</p>`;}
+}
+function renderDisplays(displays) {
+  const slots=[1,2].map(slot=>{
+    const d=displays.find(d=>d.display_slot===slot);
+    return d
+      ?`<div class="row"><div>
+          <div class="rt">Display ${slot}：${esc(d.name)} <span class="pb ${d.status==='active'?'on':'off'}">${d.status==='active'?'有効':'無効'}</span></div>
+          <div class="rm">種別: ${esc(d.display_type)} ／ 現在Scene: ${d.current_scene_name?esc(d.current_scene_name):'（未設定）'}</div>
+        </div>
+        <div class="ra">
+          <button class="btn btn-ghost btn-sm" onclick="mEditDisplay(${d.id},'${esc(d.name)}','${esc(d.display_type)}','${d.status}')">編集</button>
+        </div></div>`
+      :`<div class="row"><div><div class="rt" style="color:var(--text3)">Display ${slot}：未作成</div></div>
+         <button class="btn btn-primary btn-sm" onclick="mCreateDisplay(${slot})">作成</button></div>`;
+  });
+  return `<div class="info-box mb-1">Displayは企画ごとに最大2台です。各Displayに動画・画像を設定し、Sceneで呼出情報を組み合わせます。</div>`+slots.join('');
+}
+window.mCreateDisplay = (slot)=> modal(`Display ${slot}を作成`,`
+  <div class="field"><label>表示名 *</label><input id="f-dn" placeholder="呼出モニター${slot}"></div>
+  <div class="field"><label>種別</label>
+    <select id="f-dt"><option value="monitor">monitor（呼出モニター）</option><option value="signage">signage（サイネージ）</option></select></div>`,
+  async()=>{
+    const name=val('f-dn');if(!name){toast('表示名は必須です','error');return false;}
+    await mpost(`/projects/${S.projectId}/displays`,{name,displaySlot:slot,displayType:val('f-dt')});
+    toast(`Display ${slot}を作成しました`,'success');return true;
+  }, ()=>{ S.tab='displays'; render(); });
+window.mEditDisplay = (id,name,type,status)=> modal('Display設定を編集',`
+  <div class="field"><label>表示名 *</label><input id="f-edn" value="${esc(name)}"></div>
+  <div class="field"><label>種別</label>
+    <select id="f-edt"><option value="monitor" ${type==='monitor'?'selected':''}>monitor</option><option value="signage" ${type==='signage'?'selected':''}>signage</option></select></div>
+  <div class="field"><label>ステータス</label>
+    <select id="f-eds"><option value="active" ${status==='active'?'selected':''}>有効</option><option value="inactive" ${status==='inactive'?'selected':''}>無効</option></select></div>`,
+  async()=>{
+    const name=val('f-edn');if(!name){toast('表示名は必須です','error');return false;}
+    await mput(`/displays/${id}`,{name,displayType:val('f-edt'),status:val('f-eds')});
+    toast('更新しました','success');return true;
+  }, ()=>{ S.tab='displays'; render(); });
+
+// ── シート詳細 ────────────────────────────────────────────
+async function vSheet(el) {
+  const d = await mget(`/sheets/${S.sheetId}/detail`);
+  S.sheetName = d.sheet.name;
+  const tabDefs=[
+    {k:'slots',   l:`時間帯（${d.timeSlots.length}）`},
+    {k:'staff',   l:`スタッフ（${d.users.length}）`},
+    {k:'notices', l:`注意事項（${d.notices.length}）`},
+    {k:'scenes',  l:'シーン'},
+  ];
+  el.innerHTML=`
+    <div class="card" style="padding:.65rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+      <div>
+        <strong>${esc(d.sheet.name)}</strong>
+        <span class="rm" style="margin-left:.5rem">整理券: <strong>${esc(d.sheet.ticket_prefix)}</strong>-????（${d.sheet.ticket_digits}桁）</span>
+        <span class="st ${d.sheet.status}" style="margin-left:.4rem">${stLabel(d.sheet.status)}</span>
+      </div>
+      <div class="ra">
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.8rem;cursor:pointer">
+          <input type="checkbox" id="entry-chk" ${d.sheet.entry_enabled?'checked':''}> 入場管理
+        </label>
+        <button class="btn btn-ghost btn-sm" onclick="mEditSheet(${d.sheet.id},'${esc(d.sheet.name)}','${d.sheet.status}')">編集</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="tabs">${tabDefs.map(t=>`<div class="tab ${S.tab===t.k?'on':''}" onclick="switchTab('${t.k}')">${t.l}</div>`).join('')}</div>
+      <div style="padding:.85rem 1rem" id="tab-body">
+        ${S.tab==='slots'   ? renderSlots(d.timeSlots)
+        : S.tab==='staff'   ? renderStaff(d.users)
+        : S.tab==='notices' ? renderNotices(d.notices)
+        : '読み込み中...'}
+      </div>
+    </div>`;
+  document.getElementById('entry-chk').onchange = async function(){
+    await mput(`/sheets/${d.sheet.id}`,{entryEnabled:this.checked});
+    toast(`入場管理を${this.checked?'ON':'OFF'}にしました`,'info');
+  };
+  if(S.tab==='scenes') loadScenes();
+}
+window.mEditSheet=(id,name,status)=>modal('シートを編集',`
+  <div class="field"><label>シート名 *</label><input id="f-esn" value="${esc(name)}"></div>
+  <div class="field"><label>ステータス</label>
+    <select id="f-ess">${['active','suspended','archived'].map(s=>`<option value="${s}" ${s===status?'selected':''}>${stLabel(s)}</option>`).join('')}</select></div>`,
+  async()=>{
+    const name=val('f-esn');if(!name){toast('シート名は必須です','error');return false;}
+    await mput(`/sheets/${id}`,{name,status:val('f-ess')});
+    toast('更新しました','success');return true;
+  }, render);
+
+// 時間帯タブ
+function renderSlots(slots) {
+  return `<div style="margin-bottom:.6rem"><button class="btn btn-primary btn-sm" onclick="mCreateSlot()">＋ 時間帯追加</button></div>`+
+  (!slots.length?'<p class="text-muted">時間帯がありません</p>':
+    `<div style="overflow-x:auto"><table class="tbl">
+      <thead><tr><th>名前</th><th>開催日時</th><th>定員</th><th>呼出開始</th><th>呼出終了</th><th>失効</th><th></th></tr></thead>
+      <tbody>${slots.map(s=>`<tr>
+        <td>${esc(s.name)}</td>
+        <td style="font-family:var(--font-mono)">${fmtDT(s.start_at)}〜${fmtT(s.end_at)}</td>
+        <td>${s.capacity_groups}組</td>
+        <td style="font-family:var(--font-mono)">${fmtT(s.call_start_at)}</td>
+        <td style="font-family:var(--font-mono)">${fmtT(s.call_end_at)}</td>
+        <td style="font-family:var(--font-mono)">${fmtT(s.expire_at)}</td>
+        <td><div class="ra">
+          <button class="btn btn-ghost btn-sm" onclick='mEditSlot(${JSON.stringify(s)})'>編集</button>
+          <button class="btn btn-danger btn-sm" onclick="delSlot(${s.id})">削除</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`);
+}
+window.mCreateSlot = ()=>{
+  const today=new Date().toISOString().slice(0,10);
+  modal('時間帯を追加',`
+    <div class="field"><label>時間帯名 *</label><input id="f-tn" placeholder="13:00〜13:30の部"></div>
+    <div class="field"><label>開催日 *</label><input id="f-td" type="date" value="${today}"></div>
+    <div class="g2">
+      <div class="field"><label>開始時刻 *</label><input id="f-ts" type="time" value="13:00"></div>
+      <div class="field"><label>終了時刻 *</label><input id="f-te" type="time" value="13:30"></div>
+    </div>
+    <div class="field"><label>定員（グループ数） *</label><input id="f-tc" type="number" min="1" value="10">
+      <p class="hint">人数ではなくグループ（組）数で入力</p></div>
+    <div class="g3">
+      <div class="field"><label>呼出開始 *</label><input id="f-tcs" type="time" value="12:55"><p class="hint">通常: 開始5分前</p></div>
+      <div class="field"><label>呼出終了 *</label><input id="f-tce" type="time" value="13:30"><p class="hint">通常: 終了と同じ</p></div>
+      <div class="field"><label>失効時刻 *</label><input id="f-tex" type="time" value="13:35"><p class="hint">通常: 終了5分後</p></div>
+    </div>
+    <div class="info-box">⚠ 呼出開始 ≤ 呼出終了 ≤ 失効 の順序が必要です</div>`,
+    async()=>{
+      const name=val('f-tn'),date=val('f-td'),ts=val('f-ts'),te=val('f-te');
+      const tcs=val('f-tcs'),tce=val('f-tce'),tex=val('f-tex');
+      const cap=parseInt(val('f-tc')||'0');
+      if(!name||!date||!ts||!te||!cap){toast('必須項目を入力してください','error');return false;}
+      if(ts>=te){toast('開始は終了より前にしてください','error');return false;}
+      if(tce>tex){toast('呼出終了は失効時刻以前にしてください','error');return false;}
+      const iso=t=>`${date}T${t}:00`;
+      await mpost(`/sheets/${S.sheetId}/time-slots`,{
+        name,startAt:iso(ts),endAt:iso(te),capacityGroups:cap,
+        callStartAt:iso(tcs),callEndAt:iso(tce),expireAt:iso(tex),
+      });
+      toast('時間帯を追加しました','success');return true;
+    }, render);
+};
+window.mEditSlot = s => {
+  const d=s.start_at.slice(0,10);
+  const t=x=>x?new Date(x).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false}):'';
+  modal('時間帯を編集',`
+    <div class="field"><label>名前 *</label><input id="f-en" value="${esc(s.name)}"></div>
+    <div class="field"><label>定員（グループ数） *</label><input id="f-ec" type="number" min="1" value="${s.capacity_groups}"></div>
+    <div class="g3">
+      <div class="field"><label>呼出開始</label><input id="f-ecs" type="time" value="${t(s.call_start_at)}"></div>
+      <div class="field"><label>呼出終了</label><input id="f-ece" type="time" value="${t(s.call_end_at)}"></div>
+      <div class="field"><label>失効時刻</label><input id="f-eex" type="time" value="${t(s.expire_at)}"></div>
+    </div>`,
+    async()=>{
+      const name=val('f-en');if(!name){toast('名前は必須です','error');return false;}
+      const cap=parseInt(val('f-ec')||'0');if(!cap){toast('定員は1以上です','error');return false;}
+      const iso=t=>`${d}T${t}:00`;
+      const cs=val('f-ecs'),ce=val('f-ece'),ex=val('f-eex');
+      await mput(`/time-slots/${s.id}`,{name,capacityGroups:cap,
+        callStartAt:cs?iso(cs):undefined,callEndAt:ce?iso(ce):undefined,expireAt:ex?iso(ex):undefined});
+      toast('更新しました','success');return true;
+    }, render);
+};
+window.delSlot = async id=>{
+  if(!confirm('この時間帯を削除しますか？'))return;
+  try{await mdel(`/time-slots/${id}`);toast('削除しました','success');render();}
+  catch(e){toast(e.message,'error');}
+};
+
+// スタッフタブ
+function renderStaff(users) {
+  return `<div style="margin-bottom:.6rem"><button class="btn btn-primary btn-sm" onclick="mCreateStaff()">＋ スタッフ追加</button></div>`+
+  (!users.length?'<p class="text-muted">スタッフがいません</p>':
+    users.map(u=>`<div class="row">
+      <div><div class="rt">${esc(u.display_name)} <span class="pb ${u.permission}">${permLabel(u.permission)}</span>
+        ${u.account_type==='shared'?'<span class="pb">共有</span>':''}
+        <span class="pb ${u.status==='active'?'on':'off'}">${u.status==='active'?'有効':'無効'}</span></div>
+        <div class="rm">@${esc(u.username)}</div></div>
+      <div class="ra">
+        <button class="btn btn-ghost btn-sm" onclick="mChangePw(${u.id},'${esc(u.display_name)}')">PW変更</button>
+        <button class="btn btn-danger btn-sm" onclick="delSheetPerm(${u.permission_id},'${esc(u.display_name)}')">削除</button>
+      </div>
+    </div>`).join(''));
+}
+window.mCreateStaff = ()=> modal('スタッフアカウントを作成',`
+  <div class="field"><label>表示名 *</label><input id="f-udn" placeholder="A01受付スタッフ"></div>
+  <div class="field"><label>ユーザー名（ログインID） *</label><input id="f-uun" placeholder="a01_staff" autocomplete="off"></div>
+  <div class="field"><label>パスワード *（6文字以上）</label><input id="f-upw" type="password" autocomplete="new-password"></div>
+  <div class="field"><label>権限</label>
+    <select id="f-upm">
+      <option value="staff">スタッフ（受付・呼出操作のみ）</option>
+      <option value="sheet_manager">シート管理者（設定変更可）</option>
+    </select></div>
+  <div class="info-box">このシートにスコープ固定された共有アカウントを作成します。</div>`,
+  async()=>{
+    const dn=val('f-udn'),un=val('f-uun'),pw=val('f-upw');
+    if(!dn||!un||!pw){toast('必須項目を入力してください','error');return false;}
+    if(pw.length<6){toast('パスワードは6文字以上です','error');return false;}
+    await mpost(`/sheets/${S.sheetId}/users`,{displayName:dn,username:un,password:pw,permission:val('f-upm'),accountType:'shared'});
+    toast('スタッフを作成しました','success');return true;
+  }, render);
+window.mChangePw = (id,name)=> modal(`パスワード変更: ${name}`,`
+  <div class="field"><label>新しいパスワード *（6文字以上）</label><input id="f-npw" type="password" autocomplete="new-password"></div>`,
+  async()=>{
+    const pw=val('f-npw');if(!pw||pw.length<6){toast('6文字以上で入力してください','error');return false;}
+    await mput(`/users/${id}/password`,{password:pw});
+    toast('パスワードを変更しました','success');return true;
+  }, ()=>{});
+window.delSheetPerm = async(permId,name)=>{
+  if(!confirm(`${name}のシートへのアクセス権を削除しますか？\nアカウント自体は残ります。`))return;
+  try{await mdel(`/sheet-permissions/${permId}`);toast('削除しました','success');render();}
+  catch(e){toast(e.message,'error');}
+};
+
+// 注意事項タブ
+function renderNotices(notices) {
+  return `<div style="margin-bottom:.6rem"><button class="btn btn-primary btn-sm" onclick="mCreateNotice()">＋ 注意事項追加</button></div>`+
+  (!notices.length?'<p class="text-muted">注意事項がありません</p>':
+    notices.map(n=>`<div class="row">
+      <div style="min-width:0;flex:1">
+        <div class="rt" style="font-size:.84rem"><span class="pb">${screenLabel(n.screen_type)}</span> ${n.title?esc(n.title):''}</div>
+        <div class="rm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.body).slice(0,70)}${n.body.length>70?'…':''}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" style="flex-shrink:0" onclick="delNotice(${n.id})">削除</button>
+    </div>`).join(''));
+}
+window.mCreateNotice = ()=> modal('注意事項を追加',`
   <div class="field"><label>表示画面</label>
-    <select id="f-nscreen">
+    <select id="f-nsc">
       <option value="reserve">予約画面</option>
       <option value="reservation_complete">予約完了画面</option>
       <option value="reception_confirm">受付確認画面</option>
-      <option value="staff_notice">スタッフ画面</option>
-    </select>
-  </div>
-  <div class="field"><label>タイトル</label><input id="f-ntitle" placeholder="任意"></div>
-  <div class="field"><label>本文 *</label><textarea id="f-nbody" rows="4" placeholder="来場者に表示する内容"></textarea></div>`,
-  async () => {
-    const body = v('f-nbody');
-    if (!body) { toast('本文は必須です','error'); return false; }
-    await mpost(`/sheets/${state.sheetId}/notices`, { screenType: v('f-nscreen'), title: v('f-ntitle')||null, body });
-    toast('注意事項を追加しました','success'); return true;
-  }, renderView
-);
-
-window.deleteNotice = async (id) => {
-  if (!confirm('削除しますか？')) return;
-  await mdel(`/notices/${id}`); toast('削除しました','success'); renderView();
+      <option value="staff_notice">スタッフ運用画面</option>
+    </select></div>
+  <div class="field"><label>タイトル（任意）</label><input id="f-ntitle" placeholder="ご注意ください"></div>
+  <div class="field"><label>本文 *</label><textarea id="f-nbody" rows="4" placeholder="表示する内容"></textarea></div>`,
+  async()=>{
+    const body=val('f-nbody');if(!body){toast('本文は必須です','error');return false;}
+    await mpost(`/sheets/${S.sheetId}/notices`,{screenType:val('f-nsc'),title:val('f-ntitle')||null,body});
+    toast('追加しました','success');return true;
+  }, render);
+window.delNotice = async id=>{
+  if(!confirm('削除しますか？'))return;
+  try{await mdel(`/notices/${id}`);toast('削除しました','success');render();}
+  catch(e){toast(e.message,'error');}
 };
 
+// シーンタブ
+async function loadScenes() {
+  try{
+    const {scenes}=await mget(`/sheets/${S.sheetId}/scenes`);
+    document.getElementById('tab-body').innerHTML=renderScenes(scenes);
+  }catch(e){document.getElementById('tab-body').innerHTML=`<p class="text-danger">${esc(e.message)}</p>`;}
+}
+function renderScenes(scenes) {
+  return `<div class="info-box mb-1">シーンはScene Editor（別画面）で編集します。ここでは一覧確認のみできます。</div>`+
+  (!scenes.length?'<p class="text-muted">シーンがありません</p>':
+    scenes.map(s=>`<div class="row">
+      <div><div class="rt">${esc(s.name)} <span class="st ${s.status}">${stLabel(s.status)}</span></div>
+        <div class="rm">${s.description?esc(s.description):''} ／ バージョン: ${s.version}</div></div>
+    </div>`).join(''));
+}
+
 // ── モーダル ──────────────────────────────────────────────
-function showModal(title, bodyHtml, onSubmit, onDone) {
-  const ov = document.getElementById('modal-overlay');
-  const box = document.getElementById('modal-box');
-  box.innerHTML = `
-    <h3>${title}</h3>
-    <div style="display:flex;flex-direction:column;gap:.75rem" id="modal-fields">${bodyHtml}</div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" id="btn-modal-cancel">キャンセル</button>
-      <button class="btn btn-primary" id="btn-modal-ok">保存</button>
-    </div>`;
-  ov.classList.add('open');
-  document.getElementById('btn-modal-cancel').onclick = () => ov.classList.remove('open');
-  document.getElementById('btn-modal-ok').onclick = async () => {
-    const btn = document.getElementById('btn-modal-ok');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-    try {
-      const ok = await onSubmit();
-      if (ok !== false) { ov.classList.remove('open'); if (onDone) onDone(); }
-    } catch(e) { toast(e.message, 'error'); }
-    finally { if(btn) { btn.disabled = false; btn.textContent = '保存'; } }
+function modal(title,bodyHtml,onOk,onDone) {
+  const bg=document.getElementById('mbg'), box=document.getElementById('mbox');
+  box.innerHTML=`<h3>${title}</h3>
+    <div style="display:flex;flex-direction:column;gap:.7rem">${bodyHtml}</div>
+    <div class="mfoot"><button class="btn btn-ghost" id="m-cancel">キャンセル</button>
+    <button class="btn btn-primary" id="m-ok">保存</button></div>`;
+  bg.classList.add('open');
+  document.getElementById('m-cancel').onclick=()=>bg.classList.remove('open');
+  document.getElementById('m-ok').onclick=async()=>{
+    const btn=document.getElementById('m-ok');
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+    try{
+      const ok=await onOk();
+      if(ok!==false){bg.classList.remove('open');if(onDone)onDone();}
+    }catch(e){toast(e.message,'error');}
+    finally{if(btn){btn.disabled=false;btn.textContent='保存';}}
   };
-  ov.onclick = (e) => { if (e.target === ov) ov.classList.remove('open'); };
-  // 最初のinputにフォーカス
-  setTimeout(() => box.querySelector('input,select,textarea')?.focus(), 50);
+  bg.onclick=e=>{if(e.target===bg)bg.classList.remove('open');};
+  setTimeout(()=>box.querySelector('input,select,textarea')?.focus(),60);
 }
 
 // ── ユーティリティ ────────────────────────────────────────
-function v(id) { return (document.getElementById(id)?.value ?? '').trim(); }
-function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function fmtDT(iso) { return iso ? new Date(iso).toLocaleDateString('ja-JP',{month:'2-digit',day:'2-digit'}) + ' ' + fmtT(iso) : '—'; }
-function fmtT(iso) { return iso ? new Date(iso).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; }
-function statusLabel(s) { return {draft:'下書き',active:'有効',suspended:'停止中',archived:'アーカイブ'}[s]??s; }
-function permLabel(s) { return {staff:'スタッフ',sheet_manager:'シート管理者',project_manager:'企画管理者',viewer:'閲覧者'}[s]??s; }
-function screenLabel(s) { return {reserve:'予約',reservation_complete:'予約完了',reception_confirm:'受付確認',staff_notice:'スタッフ'}[s]??s; }
+function val(id){return(document.getElementById(id)?.value??'').trim();}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDT(iso){const d=new Date(iso);return`${d.getMonth()+1}/${d.getDate()} ${fmtT(iso)}`;}
+function fmtT(iso){return iso?new Date(iso).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false}):'—';}
+function stLabel(s){return{draft:'下書き',active:'有効',suspended:'停止中',archived:'アーカイブ',inactive:'無効'}[s]??s;}
+function roleLabel(r){return{developer:'開発者',system_admin:'システム管理者',user:'ユーザー'}[r]??r;}
+function permLabel(p){return{staff:'スタッフ',sheet_manager:'シート管理者',project_manager:'企画管理者',viewer:'閲覧者'}[p]??p;}
+function screenLabel(s){return{reserve:'予約',reservation_complete:'予約完了',reception_confirm:'受付確認',staff_notice:'スタッフ'}[s]??s;}
 </script>
 </body>
 </html>
