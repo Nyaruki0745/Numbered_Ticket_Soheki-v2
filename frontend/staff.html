@@ -1,3 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スタッフ運用</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{min-height:100vh;display:flex;flex-direction:column}
+#header{display:flex;align-items:center;justify-content:space-between;
+  padding:.6rem 1rem;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+#header h1{font-size:1rem;font-weight:700}
+.header-meta{display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:var(--text2)}
+.poll-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s}
+.poll-dot.active{background:var(--success)}
+#main{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;max-width:720px;margin:0 auto;width:100%}
+
+/* ログイン */
+#login-screen{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem}
+
+/* 呼出パネル */
+#call-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.panel-header{padding:.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);
+  font-size:.82rem;color:var(--text2);display:flex;justify-content:space-between}
+.current-ticket{text-align:center;padding:1.5rem 1rem}
+.ticket-num{font-family:var(--font-mono);font-size:2.6rem;font-weight:800;color:var(--accent);letter-spacing:.04em}
+.ticket-meta{font-size:.85rem;color:var(--text2);margin-top:.25rem}
+.action-btns{display:flex;gap:.6rem;padding:.75rem 1rem;border-top:1px solid var(--border)}
+.action-btns .btn{flex:1}
+
+/* 次候補 */
+.next-list{padding:.5rem 1rem .75rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.3rem}
+.next-row{display:flex;align-items:center;gap:.75rem;font-size:.88rem}
+.next-label{color:var(--text3);width:56px;flex-shrink:0}
+.next-code{font-family:var(--font-mono);font-weight:600}
+
+/* 不在 */
+#absent-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.75rem 1rem}
+.absent-title{font-size:.82rem;color:var(--text2);margin-bottom:.4rem}
+.absent-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.absent-chip{font-family:var(--font-mono);font-size:.82rem;padding:.2rem .55rem;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--warning)}
+
+/* 他時間帯 */
+#slots-panel summary{cursor:pointer;font-size:.85rem;color:var(--text2);padding:.5rem}
+.slot-row{display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem .75rem;border-bottom:1px solid var(--border);font-size:.85rem}
+.slot-row:last-child{border-bottom:none}
+
+/* 検索モーダル */
+#search-modal{display:none;position:fixed;inset:0;background:#000a;z-index:100;
+  align-items:center;justify-content:center;padding:1rem}
+#search-modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);
+  width:100%;max-width:440px;padding:1.25rem;display:flex;flex-direction:column;gap:.9rem}
+.search-result{display:flex;flex-direction:column;gap:.5rem}
+.result-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:.75rem 1rem;display:flex;flex-direction:column;gap:.35rem}
+.result-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="header" style="display:none">
+  <h1>🎫 <span id="header-sheet">スタッフ運用</span></h1>
+  <div class="header-meta">
+    <div class="poll-dot" id="poll-dot"></div>
+    <span id="poll-status">接続中</span>
+    <button class="btn btn-ghost btn-sm" id="btn-logout">ログアウト</button>
+  </div>
+</div>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-box">
+    <h2 style="text-align:center">スタッフログイン</h2>
+    <div class="field"><label>ユーザー名</label><input id="login-user" autocomplete="username"></div>
+    <div class="field"><label>パスワード</label><input id="login-pass" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary btn-lg w-full" id="btn-login">ログイン</button>
+    <p id="login-error" class="text-danger text-center" style="min-height:1.2em;font-size:.85rem"></p>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<div id="main" style="display:none">
+
+  <!-- 呼出パネル -->
+  <div id="call-panel">
+    <div class="panel-header">
+      <span id="slot-label">時間帯: —</span>
+      <span id="slot-status-badge"></span>
+    </div>
+    <div class="current-ticket">
+      <div class="ticket-num" id="current-ticket">—</div>
+      <div class="ticket-meta" id="current-meta"></div>
+    </div>
+    <div class="action-btns">
+      <button class="btn btn-success" id="btn-accept" disabled>受付</button>
+      <button class="btn btn-ghost"   id="btn-next"   disabled>次へ</button>
+      <button class="btn btn-danger"  id="btn-cancel" disabled>キャンセル</button>
+    </div>
+    <div class="next-list" id="next-list"></div>
+  </div>
+
+  <!-- 不在一覧 -->
+  <div id="absent-panel" style="display:none">
+    <div class="absent-title">不在番号</div>
+    <div class="absent-chips" id="absent-chips"></div>
+  </div>
+
+  <!-- 他時間帯 -->
+  <details id="slots-panel" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)">
+    <summary>他の時間帯の状況</summary>
+    <div id="slots-list"></div>
+  </details>
+
+  <!-- 検索ボタン -->
+  <button class="btn btn-ghost w-full" id="btn-search-open">🔍 整理番号を検索</button>
+</div>
+
+<!-- 受付確認モーダル -->
+<div id="confirm-modal" class="search-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:101;align-items:center;justify-content:center;padding:1rem">
+  <div class="modal-box">
+    <h3>受付確認</h3>
+    <div id="confirm-detail"></div>
+    <div class="flex gap-1">
+      <button class="btn btn-ghost w-full" onclick="closeConfirm()">キャンセル</button>
+      <button class="btn btn-success w-full" id="btn-do-accept">受付する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 検索モーダル -->
+<div id="search-modal">
+  <div class="modal-box">
+    <h3 style="font-size:1rem">整理番号検索</h3>
+    <div class="flex gap-1">
+      <input id="search-input" placeholder="A01-0001" style="flex:1">
+      <button class="btn btn-primary btn-sm" id="btn-search">検索</button>
+    </div>
+    <div class="search-result" id="search-result"></div>
+    <button class="btn btn-ghost btn-sm" onclick="closeSearch()">閉じる</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
 <script type="module">
 import {
   api,
@@ -779,3 +925,5 @@ if (getToken()) {
   // sheetId はログイン時にユーザー情報から取得する。
 }
 </script>
+</body>
+</html>
