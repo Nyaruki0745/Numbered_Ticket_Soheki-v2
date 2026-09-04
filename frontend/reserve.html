@@ -92,29 +92,52 @@ async function init() {
 
 function renderSlots(slots) {
   const list = document.getElementById('slot-list');
-  if (!slots.length) { list.innerHTML='<p class="text-muted text-center">現在予約できる時間帯がありません</p>'; return; }
+
+  if (!slots.length) {
+    list.innerHTML =
+      '<p class="text-muted text-center">現在予約できる時間帯がありません</p>';
+    return;
+  }
+
+  // 時間帯をIDから取得できるようにする
+  const slotMap = new Map(slots.map(s => [String(s.id), s]));
+
   list.innerHTML = slots.map(s => `
-    <div class="slot-card ${s.isOpen ? '' : 'disabled'}" data-id="${s.id}"
-      onclick="selectSlot(${JSON.stringify(JSON.stringify(s))})">
+    <div
+      class="slot-card ${s.isOpen ? '' : 'disabled'}"
+      data-id="${s.id}"
+    >
       <div>
-        <div class="slot-time">${fmtTime(s.startAt)} 〜 ${fmtTime(s.endAt)}</div>
-        <div class="slot-remain ${s.remainingGroups===0?'full':''}">
+        <div class="slot-time">
+          ${fmtTime(s.startAt)} 〜 ${fmtTime(s.endAt)}
+        </div>
+        <div class="slot-remain ${s.remainingGroups === 0 ? 'full' : ''}">
           ${s.isOpen ? `残り ${s.remainingGroups} 組` : '受付終了'}
         </div>
       </div>
       ${s.isOpen ? '<span style="color:var(--accent)">→</span>' : ''}
-    </div>`).join('');
-}
+    </div>
+  `).join('');
 
-window.selectSlot = function(jsonStr) {
-  const s = JSON.parse(jsonStr);
-  if (!s.isOpen) return;
-  selectedSlot = s;
-  document.getElementById('selected-slot-info').innerHTML =
-    `<strong>${fmtTime(s.startAt)} 〜 ${fmtTime(s.endAt)}</strong>
-     <span class="text-muted" style="margin-left:.5rem">残り ${s.remainingGroups} 組</span>`;
-  goStep('step-count');
-};
+  // クリックイベントをJavaScript側で設定
+  list.querySelectorAll('.slot-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const slot = slotMap.get(card.dataset.id);
+
+      if (!slot || !slot.isOpen) return;
+
+      selectedSlot = slot;
+
+      document.getElementById('selected-slot-info').innerHTML =
+        `<strong>${fmtTime(slot.startAt)} 〜 ${fmtTime(slot.endAt)}</strong>
+         <span class="text-muted" style="margin-left:.5rem">
+           残り ${slot.remainingGroups} 組
+         </span>`;
+
+      goStep('step-count');
+    });
+  });
+}
 
 document.getElementById('btn-next-confirm').onclick = () => {
   const size = parseInt(document.getElementById('group-size').value, 10);
