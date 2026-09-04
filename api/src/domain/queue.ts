@@ -19,58 +19,152 @@ export async function advanceQueue(
   const queue = await getCallQueue(db, queueId);
   if (!queue) return;
 
-  const slotNow = new Date();
-  // time_slotのexpire_at確認はcaller側で実施済みを前提
+  // ==========================================================
+  // 通常キューの次の1件を直接取得
+  // ==========================================================
+  const entry = await getNextNormalEntry(db, queueId);
 
-  // 通常キューに waiting が残っているか
-  if (await hasNormalWaiting(db, queueId)) {
-    const entry = await getNextNormalEntry(db, queueId);
-    if (!entry) return;
+  if (entry) {
+    const timestamp = now();
+
     await db.batch([
       db.prepare(
-        `UPDATE call_queue_entries SET status='calling', called_at=?, updated_at=? WHERE id=?`
-      ).bind(now(), now(), entry.id),
+        `UPDATE call_queue_entries
+         SET
+           status = 'calling',
+           called_at = ?,
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        timestamp,
+        timestamp,
+        entry.id
+      ),
+
       db.prepare(
-        `UPDATE reservations SET status='calling', updated_at=? WHERE id=?`
-      ).bind(now(), entry.reservation_id),
+        `UPDATE reservations
+         SET
+           status = 'calling',
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        timestamp,
+        entry.reservation_id
+      ),
+
       db.prepare(
-        `UPDATE call_queues SET status='calling', current_entry_id=?, updated_at=? WHERE id=?`
-      ).bind(entry.id, now(), queueId),
+        `UPDATE call_queues
+         SET
+           status = 'calling',
+           current_entry_id = ?,
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        entry.id,
+        timestamp,
+        queueId
+      ),
     ]);
+
     await insertAuditLog(db, {
-      actor_type: actorType, user_id: userId, sheet_id: null,
-      action: 'queue.advance_normal', target_type: 'entry', target_id: entry.id,
-      details_json: null,
+      actor_type: actorType,
+      user_id: userId,
+      sheet_id: null,
+      action: 'queue.advance_normal',
+      target_type: 'entry',
+      target_id: entry.id,
+      details_json: JSON.stringify({
+        queueId,
+        reservationId: entry.reservation_id,
+      }),
     });
+
     return;
   }
 
-  // 救済キューに waiting が残っているか
-  const recoveryEntry = await getNextRecoveryEntry(db, queueId);
+  // ==========================================================
+  // 通常キューに待機がなければ救済キュー
+  // ==========================================================
+  const recoveryEntry =
+    await getNextRecoveryEntry(
+      db,
+      queueId
+    );
+
   if (recoveryEntry) {
+    const timestamp = now();
+
     await db.batch([
       db.prepare(
-        `UPDATE call_queue_entries SET status='calling', called_at=?, updated_at=? WHERE id=?`
-      ).bind(now(), now(), recoveryEntry.id),
+        `UPDATE call_queue_entries
+         SET
+           status = 'calling',
+           called_at = ?,
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        timestamp,
+        timestamp,
+        recoveryEntry.id
+      ),
+
       db.prepare(
-        `UPDATE reservations SET status='calling', updated_at=? WHERE id=?`
-      ).bind(now(), recoveryEntry.reservation_id),
+        `UPDATE reservations
+         SET
+           status = 'calling',
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        timestamp,
+        timestamp,
+        recoveryEntry.reservation_id
+      ),
+
       db.prepare(
-        `UPDATE call_queues SET status='recovery_calling', current_entry_id=?, updated_at=? WHERE id=?`
-      ).bind(recoveryEntry.id, now(), queueId),
+        `UPDATE call_queues
+         SET
+           status = 'recovery_calling',
+           current_entry_id = ?,
+           updated_at = ?
+         WHERE id = ?`
+      ).bind(
+        recoveryEntry.id,
+        timestamp,
+        queueId
+      ),
     ]);
+
     await insertAuditLog(db, {
-      actor_type: actorType, user_id: userId, sheet_id: null,
-      action: 'queue.advance_recovery', target_type: 'entry', target_id: recoveryEntry.id,
-      details_json: null,
+      actor_type: actorType,
+      user_id: userId,
+      sheet_id: null,
+      action: 'queue.advance_recovery',
+      target_type: 'entry',
+      target_id: recoveryEntry.id,
+      details_json: JSON.stringify({
+        queueId,
+        reservationId:
+          recoveryEntry.reservation_id,
+      }),
     });
+
     return;
   }
 
-  // どちらも waiting なし → finished
+  // ==========================================================
+  // 何も待機していなければ終了
+  // ==========================================================
   await db.prepare(
-    `UPDATE call_queues SET status='finished', current_entry_id=NULL, updated_at=? WHERE id=?`
-  ).bind(now(), queueId).run();
+    `UPDATE call_queues
+     SET
+       status = 'finished',
+       current_entry_id = NULL,
+       updated_at = ?
+     WHERE id = ?`
+  ).bind(
+    now(),
+    queueId
+  ).run();
 }
 
 // ============================================================
