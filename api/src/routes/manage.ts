@@ -160,7 +160,7 @@ app.post('/sheets/:sheetId/users', requireAuth, requireSheetPermission('sheet_ma
   const n = now();
   const ur = await c.env.DB.prepare(
     `INSERT INTO users (username,password_hash,account_type,display_name,role,status,created_at,updated_at)
-     VALUES (?,?,?,'user','active',?,?) RETURNING id`
+     VALUES (?,?,?,?,'user','active',?,?) RETURNING id`
   ).bind(body.username, hash, body.accountType??'shared', body.displayName, n, n).first<{ id: number }>();
   await c.env.DB.prepare(
     'INSERT INTO user_sheet_permissions (user_id,sheet_id,permission,created_at) VALUES (?,?,?,?)'
