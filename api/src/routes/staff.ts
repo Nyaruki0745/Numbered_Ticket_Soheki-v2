@@ -58,9 +58,15 @@ app.get('/sheets/:sheetId/overview', requireAuth, requireSheetPermission('staff'
       queue: queue ? { id: queue.id, status: queue.status, currentEntryId: queue.current_entry_id } : null,
     };
 
-    if (!activeSlot && ['calling','in_progress','expiration_pending','before_call'].includes(slotStatus)) {
-      activeSlot = { slot, queue, slotStatus };
-    }
+    if (
+  !activeSlot &&
+  (
+    ['calling', 'in_progress', 'expiration_pending', 'before_call'].includes(slotStatus)
+    || queue?.status === 'waiting'
+  )
+) {
+  activeSlot = { slot, queue, slotStatus };
+}
     return summary;
   }));
 

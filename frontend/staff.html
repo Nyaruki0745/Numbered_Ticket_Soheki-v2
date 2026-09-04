@@ -201,16 +201,27 @@ async function fetchAndRender() {
 }
 
 function renderOverview(data) {
-  // 現在呼出
   const cur = data.current;
-  activeQueue = data.activeTimeSlot ? { queueId: data.timeSlots.find(s => s.id === data.activeTimeSlot?.id)?.queue?.id } : null;
-  currentRes  = cur;
+
+  const activeSlotSummary = data.activeTimeSlot
+    ? data.timeSlots.find(s => s.id === data.activeTimeSlot.id)
+    : null;
+
+  activeQueue = activeSlotSummary?.queue?.id
+    ? { queueId: activeSlotSummary.queue.id }
+    : null;
+
+  currentRes = cur;
 
   document.getElementById('slot-label').textContent = data.activeTimeSlot
     ? `${data.activeTimeSlot.name} 【${statusLabel(data.activeTimeSlot.status)}】`
     : '待機中';
-  document.getElementById('current-ticket').textContent = cur?.ticketCode ?? '—';
-  document.getElementById('current-meta').textContent   = cur ? `${cur.groupSize} 名` : '';
+
+  document.getElementById('current-ticket').textContent =
+    cur?.ticketCode ?? '—';
+
+  document.getElementById('current-meta').textContent =
+    cur ? `${cur.groupSize} 名` : '';
 
   // ボタン
   document.getElementById('btn-accept').disabled = !data.canAccept || !cur;
@@ -325,7 +336,7 @@ window.doCancel = async (id, code) => {
 };
 
 function getActiveQueueId() {
-  return document.querySelector('[data-queue-id]')?.dataset?.queueId ?? null;
+  return activeQueue?.queueId ?? null;
 }
 
 function statusLabel(s) {
