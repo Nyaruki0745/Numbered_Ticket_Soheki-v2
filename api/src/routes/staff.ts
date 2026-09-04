@@ -58,11 +58,26 @@ app.get('/sheets/:sheetId/overview', requireAuth, requireSheetPermission('staff'
       queue: queue ? { id: queue.id, status: queue.status, currentEntryId: queue.current_entry_id } : null,
     };
 
-    if (
+    // 待機中の予約がある時間帯もスタッフ画面の対象にする
+let hasWaiting = false;
+
+if (queue) {
+  const waitingRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt
+     FROM call_queue_entries
+     WHERE queue_id = ?
+       AND queue_type = 'normal'
+       AND status = 'waiting'`
+  ).bind(queue.id).first<{ cnt: number }>();
+
+  hasWaiting = Number(waitingRow?.cnt ?? 0) > 0;
+}
+
+if (
   !activeSlot &&
   (
     ['calling', 'in_progress', 'expiration_pending', 'before_call'].includes(slotStatus)
-    || queue?.status === 'waiting'
+    || hasWaiting
   )
 ) {
   activeSlot = { slot, queue, slotStatus };
@@ -117,8 +132,10 @@ app.get('/sheets/:sheetId/overview', requireAuth, requireSheetPermission('staff'
     ).bind(q.id).all<any>();
     recoveryQueue = recoveryRows.results.map(r => ({ ticketCode: r.ticket_code, status: r.status }));
 
-    canNext = !q.current_entry_id && canCall(activeSlot.slot, nowDate) && await hasNormalWaiting(c.env.DB, q.id);
-  }
+   canNext =
+  !q.current_entry_id &&
+  canCall(activeSlot.slot, nowDate) &&
+  await hasNormalWaiting(c.env.DB, q.id);
 
   return successResponse({
     sheet: { id: sheet.id, name: sheet.name },
@@ -136,7 +153,7 @@ app.get('/sheets/:sheetId/overview', requireAuth, requireSheetPermission('staff'
     timeSlots: slotSummaries,
     serverTime: nowDate.toISOString(),
   });
-});
+};
 
 // ============================================================
 // GET /api/staff/reservations/:reservationId/confirm
@@ -414,5 +431,5 @@ app.post('/reservations/:reservationId/cancel', requireAuth, async (c) => {
 
   return successResponse({ message: 'キャンセルしました' });
 });
-
-export default app;
+});
+export default app

@@ -150,23 +150,34 @@ import { api, toast, genKey, saveToken, clearToken, getToken } from './js/api.js
 let sheetId = null, activeQueue = null, currentRes = null, pollTimer = null;
 
 // ── ログイン ──────────────────────────────────────────────
-document.getElementById('btn-login').onclick = async () => {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('login-error');
-  errEl.textContent = '';
-  if (!u || !p) { errEl.textContent = 'ユーザー名とパスワードを入力してください'; return; }
-  const btn = document.getElementById('btn-login');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+document.getElementById('btn-next').onclick = async () => {
+  const queueId = getActiveQueueId();
+  if (!queueId) {
+    toast('対象のキューがありません', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-next');
+  btn.disabled = true;
+
   try {
-    const data = await api.login(u, p);
-    saveToken(data.token);
-    sheetId = data.user.sheetId;
-    document.getElementById('header-sheet').textContent = `シート ${sheetId ?? '?'}`;
-    showMain();
-  } catch(e) {
-    errEl.textContent = e.code === 'INVALID_CREDENTIALS' ? 'ユーザー名またはパスワードが違います' : e.message;
-  } finally { btn.disabled = false; btn.textContent = 'ログイン'; }
+    if (currentRes) {
+      // 現在呼出中 → 不在扱いにして次を呼び出す
+      await api.markAbsentAndNext(queueId, genKey());
+      toast('不在処理して次を呼び出しました', 'info');
+    } else {
+      // まだ呼出中なし → 最初の番号を呼び出す
+      await api.callNext(queueId, genKey());
+      toast('次の番号を呼び出しました', 'info');
+    }
+
+    await fetchAndRender();
+
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 };
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); });
 
@@ -203,126 +214,88 @@ async function fetchAndRender() {
 function renderOverview(data) {
   const cur = data.current;
 
+  // アクティブなキューを保存
   const activeSlotSummary = data.activeTimeSlot
     ? data.timeSlots.find(s => s.id === data.activeTimeSlot.id)
     : null;
 
-  activeQueue = activeSlotSummary?.queue?.id
+  activeQueue = activeSlotSummary?.queue
     ? { queueId: activeSlotSummary.queue.id }
     : null;
 
   currentRes = cur;
 
+  // 時間帯
   document.getElementById('slot-label').textContent = data.activeTimeSlot
     ? `${data.activeTimeSlot.name} 【${statusLabel(data.activeTimeSlot.status)}】`
     : '待機中';
 
+  // 現在呼出中がある場合はそれを表示
+  // ない場合は「次に呼ぶ番号」を表示
+  const nextTicket = data.next?.[0];
+
   document.getElementById('current-ticket').textContent =
-    cur?.ticketCode ?? '—';
+    cur?.ticketCode ??
+    nextTicket?.ticketCode ??
+    '—';
 
   document.getElementById('current-meta').textContent =
-    cur ? `${cur.groupSize} 名` : '';
+    cur
+      ? `${cur.groupSize} 名`
+      : nextTicket
+        ? '次に呼び出す番号'
+        : '';
 
   // ボタン
-  document.getElementById('btn-accept').disabled = !data.canAccept || !cur;
-  document.getElementById('btn-next').disabled   = !data.canNext;
-  document.getElementById('btn-cancel').disabled = !cur;
+  document.getElementById('btn-accept').disabled =
+    !data.canAccept || !cur;
+
+  document.getElementById('btn-next').disabled =
+    !data.canNext;
+
+  document.getElementById('btn-cancel').disabled =
+    !cur;
 
   // 次候補
   const labels = ['次', '次々', '次々次'];
-  document.getElementById('next-list').innerHTML = data.next.map((t, i) =>
-    `<div class="next-row"><span class="next-label">${labels[i] ?? ''}</span><span class="next-code">${t.ticketCode ?? t}</span></div>`
-  ).join('');
+
+  document.getElementById('next-list').innerHTML =
+    (data.next ?? []).map((t, i) =>
+      `<div class="next-row">
+        <span class="next-label">${labels[i] ?? ''}</span>
+        <span class="next-code">${t.ticketCode ?? t}</span>
+      </div>`
+    ).join('');
 
   // 不在
   const absentPanel = document.getElementById('absent-panel');
+
   if (data.absent?.length) {
     absentPanel.style.display = '';
-    document.getElementById('absent-chips').innerHTML = data.absent.map(a =>
-      `<span class="absent-chip">${a.ticketCode}</span>`).join('');
-  } else { absentPanel.style.display = 'none'; }
+
+    document.getElementById('absent-chips').innerHTML =
+      data.absent.map(a =>
+        `<span class="absent-chip">${a.ticketCode}</span>`
+      ).join('');
+  } else {
+    absentPanel.style.display = 'none';
+  }
 
   // 他時間帯
-  document.getElementById('slots-list').innerHTML = data.timeSlots.map(s =>
-    `<div class="slot-row">
-      <span>${s.name} <span class="badge badge-${s.status}">${statusLabel(s.status)}</span></span>
-      <span class="text-muted">${s.reservedGroups}/${s.capacityGroups} 組</span>
-    </div>`
-  ).join('');
-}
-
-// ── 受付ボタン ─────────────────────────────────────────────
-document.getElementById('btn-accept').onclick = async () => {
-  if (!currentRes) return;
-  document.getElementById('confirm-detail').innerHTML =
-    `<p><strong>整理番号:</strong> ${currentRes.ticketCode}</p>
-     <p><strong>人数:</strong> ${currentRes.groupSize} 名</p>`;
-  document.getElementById('confirm-modal').style.display = 'flex';
-  document.getElementById('btn-do-accept').onclick = async () => {
-    const btn = document.getElementById('btn-do-accept');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-    try {
-      await api.acceptReservation(currentRes.reservationId, genKey());
-      closeConfirm(); toast('受付しました', 'success'); fetchAndRender();
-    } catch(e) { toast(e.message, 'error'); }
-    finally { btn.disabled = false; btn.textContent = '受付する'; }
-  };
-};
-window.closeConfirm = () => { document.getElementById('confirm-modal').style.display = 'none'; };
-
-// ── 次へボタン ─────────────────────────────────────────────
-document.getElementById('btn-next').onclick = async () => {
-  const queueId = getActiveQueueId();
-  if (!queueId) return;
-  const btn = document.getElementById('btn-next');
-  btn.disabled = true;
-  try {
-    await api.markAbsentAndNext(queueId, genKey());
-    toast('次を呼び出しました', 'info'); fetchAndRender();
-  } catch(e) { toast(e.message, 'error'); }
-  finally { btn.disabled = false; }
-};
-
-// ── キャンセルボタン ────────────────────────────────────────
-document.getElementById('btn-cancel').onclick = async () => {
-  if (!currentRes || !confirm(`A01-0023 をキャンセルしますか？`)) return;
-  try {
-    await api.cancelStaff(currentRes.reservationId, genKey());
-    toast('キャンセルしました', 'success'); fetchAndRender();
-  } catch(e) { toast(e.message, 'error'); }
-};
-
-// ── 検索 ──────────────────────────────────────────────────
-document.getElementById('btn-search-open').onclick = () => {
-  document.getElementById('search-modal').classList.add('open');
-  document.getElementById('search-input').focus();
-};
-window.closeSearch = () => {
-  document.getElementById('search-modal').classList.remove('open');
-  document.getElementById('search-result').innerHTML = '';
-  document.getElementById('search-input').value = '';
-};
-document.getElementById('btn-search').onclick = async () => {
-  const q = document.getElementById('search-input').value.trim();
-  if (!q) return;
-  try {
-    const data = await api.searchReservations(sheetId, q);
-    renderSearchResults(data.results);
-  } catch(e) { toast(e.message, 'error'); }
-};
-
-function renderSearchResults(results) {
-  const el = document.getElementById('search-result');
-  if (!results.length) { el.innerHTML = '<p class="text-muted">見つかりませんでした</p>'; return; }
-  el.innerHTML = results.map(r => `
-    <div class="result-card">
-      <div style="font-family:var(--font-mono);font-weight:700">${r.ticketCode}</div>
-      <div class="text-muted">${r.timeSlot.name} / ${r.groupSize}名 / <span class="badge badge-${r.status}">${r.status}</span></div>
-      <div class="result-actions">
-        ${r.status==='reserved'||r.status==='absent'?`<button class="btn btn-sm btn-primary" onclick="doEmergencyCall(${r.id})">即時呼出</button>`:''}
-        <button class="btn btn-sm btn-danger" onclick="doCancel(${r.id},'${r.ticketCode}')">即時キャンセル</button>
-      </div>
-    </div>`).join('');
+  document.getElementById('slots-list').innerHTML =
+    data.timeSlots.map(s =>
+      `<div class="slot-row">
+        <span>
+          ${s.name}
+          <span class="badge badge-${s.status}">
+            ${statusLabel(s.status)}
+          </span>
+        </span>
+        <span class="text-muted">
+          ${s.reservedGroups}/${s.capacityGroups} 組
+        </span>
+      </div>`
+    ).join('');
 }
 
 window.doEmergencyCall = async (id) => {

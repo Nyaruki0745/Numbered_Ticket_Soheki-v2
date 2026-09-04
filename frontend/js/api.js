@@ -34,8 +34,16 @@ export const api = {
   confirmReservation: (id) => apiFetch(`/staff/reservations/${id}/confirm`),
   acceptReservation: (id, key) => apiFetch(`/staff/reservations/${id}/accept`, { method: 'POST', body: '{}', idempotencyKey: key }),
   markAbsentAndNext: (queueId, key) => apiFetch(`/staff/queues/${queueId}/mark-absent-and-next`, { method: 'POST', body: '{}', idempotencyKey: key }),
-  callNext: (queueId, key) => apiFetch(`/staff/queues/${queueId}/call-next`, { method: 'POST', body: '{}', idempotencyKey: key }),
-  addRecovery: (queueId, reservationId, key) =>
+  callNext: (queueId, idempotencyKey) =>
+  request(
+    `/staff/queues/${queueId}/call-next`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Idempotency-Key': idempotencyKey
+      }
+    }
+  ),addRecovery: (queueId, reservationId, key) =>
     apiFetch(`/staff/queues/${queueId}/recovery`, { method: 'POST', body: JSON.stringify({ reservationId }), idempotencyKey: key }),
   searchReservations: (sheetId, q) => apiFetch(`/staff/sheets/${sheetId}/reservations/search?q=${encodeURIComponent(q)}`),
   emergencyCall: (id, key) => apiFetch(`/staff/reservations/${id}/emergency-call`, { method: 'POST', body: '{}', idempotencyKey: key }),
@@ -69,3 +77,4 @@ export function toast(msg, type = 'info', duration = 3000) {
   c.appendChild(el);
   setTimeout(() => el.remove(), duration);
 }
+
