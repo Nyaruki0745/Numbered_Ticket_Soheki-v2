@@ -5,35 +5,62 @@ export const API_BASE =
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('seiriken_token');
 
-  const res = await fetch(`${API_BASE}/api${path}`, {
+  const isGet =
+    !options.method ||
+    options.method.toUpperCase() === 'GET';
+
+  const headers = {
+    'Content-Type': 'application/json',
+
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`
+        }
+      : {}),
+
+    ...(options.idempotencyKey
+      ? {
+          'Idempotency-Key':
+            options.idempotencyKey
+        }
+      : {}),
+
+    ...(options.headers || {}),
+  };
+
+  const fetchOptions = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token
-        ? { Authorization: `Bearer ${token}` }
-        : {}),
-      ...(options.idempotencyKey
-        ? { 'Idempotency-Key': options.idempotencyKey }
-        : {}),
-      ...(options.headers || {}),
-    },
-  });
+    headers,
+  };
+
+  // GETは必ず最新状態を取得する
+  if (isGet) {
+    fetchOptions.cache = 'no-store';
+  }
+
+  const res = await fetch(
+    `${API_BASE}/api${path}`,
+    fetchOptions
+  );
 
   const json = await res.json();
 
   if (!json.ok) {
     throw Object.assign(
       new Error(
-        json.error?.message ?? 'APIエラー'
+        json.error?.message ??
+        'APIエラー'
       ),
       {
-        code: json.error?.code,
+        code:
+          json.error?.code
       }
     );
   }
 
   return json.data;
 }
+
 
 export const api = {
   // ==========================================================
