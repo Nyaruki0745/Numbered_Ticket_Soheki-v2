@@ -1,327 +1,781 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>スタッフ運用</title>
-<link rel="stylesheet" href="css/style.css">
-<style>
-body{min-height:100vh;display:flex;flex-direction:column}
-#header{display:flex;align-items:center;justify-content:space-between;
-  padding:.6rem 1rem;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
-#header h1{font-size:1rem;font-weight:700}
-.header-meta{display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:var(--text2)}
-.poll-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s}
-.poll-dot.active{background:var(--success)}
-#main{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;max-width:720px;margin:0 auto;width:100%}
-
-/* ログイン */
-#login-screen{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem}
-.login-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem}
-
-/* 呼出パネル */
-#call-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
-.panel-header{padding:.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);
-  font-size:.82rem;color:var(--text2);display:flex;justify-content:space-between}
-.current-ticket{text-align:center;padding:1.5rem 1rem}
-.ticket-num{font-family:var(--font-mono);font-size:2.6rem;font-weight:800;color:var(--accent);letter-spacing:.04em}
-.ticket-meta{font-size:.85rem;color:var(--text2);margin-top:.25rem}
-.action-btns{display:flex;gap:.6rem;padding:.75rem 1rem;border-top:1px solid var(--border)}
-.action-btns .btn{flex:1}
-
-/* 次候補 */
-.next-list{padding:.5rem 1rem .75rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.3rem}
-.next-row{display:flex;align-items:center;gap:.75rem;font-size:.88rem}
-.next-label{color:var(--text3);width:56px;flex-shrink:0}
-.next-code{font-family:var(--font-mono);font-weight:600}
-
-/* 不在 */
-#absent-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.75rem 1rem}
-.absent-title{font-size:.82rem;color:var(--text2);margin-bottom:.4rem}
-.absent-chips{display:flex;flex-wrap:wrap;gap:.4rem}
-.absent-chip{font-family:var(--font-mono);font-size:.82rem;padding:.2rem .55rem;
-  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--warning)}
-
-/* 他時間帯 */
-#slots-panel summary{cursor:pointer;font-size:.85rem;color:var(--text2);padding:.5rem}
-.slot-row{display:flex;align-items:center;justify-content:space-between;
-  padding:.5rem .75rem;border-bottom:1px solid var(--border);font-size:.85rem}
-.slot-row:last-child{border-bottom:none}
-
-/* 検索モーダル */
-#search-modal{display:none;position:fixed;inset:0;background:#000a;z-index:100;
-  align-items:center;justify-content:center;padding:1rem}
-#search-modal.open{display:flex}
-.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);
-  width:100%;max-width:440px;padding:1.25rem;display:flex;flex-direction:column;gap:.9rem}
-.search-result{display:flex;flex-direction:column;gap:.5rem}
-.result-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
-  padding:.75rem 1rem;display:flex;flex-direction:column;gap:.35rem}
-.result-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-</style>
-</head>
-<body>
-<div id="header" style="display:none">
-  <h1>🎫 <span id="header-sheet">スタッフ運用</span></h1>
-  <div class="header-meta">
-    <div class="poll-dot" id="poll-dot"></div>
-    <span id="poll-status">接続中</span>
-    <button class="btn btn-ghost btn-sm" id="btn-logout">ログアウト</button>
-  </div>
-</div>
-
-<!-- ログイン画面 -->
-<div id="login-screen">
-  <div class="login-box">
-    <h2 style="text-align:center">スタッフログイン</h2>
-    <div class="field"><label>ユーザー名</label><input id="login-user" autocomplete="username"></div>
-    <div class="field"><label>パスワード</label><input id="login-pass" type="password" autocomplete="current-password"></div>
-    <button class="btn btn-primary btn-lg w-full" id="btn-login">ログイン</button>
-    <p id="login-error" class="text-danger text-center" style="min-height:1.2em;font-size:.85rem"></p>
-  </div>
-</div>
-
-<!-- メイン画面 -->
-<div id="main" style="display:none">
-
-  <!-- 呼出パネル -->
-  <div id="call-panel">
-    <div class="panel-header">
-      <span id="slot-label">時間帯: —</span>
-      <span id="slot-status-badge"></span>
-    </div>
-    <div class="current-ticket">
-      <div class="ticket-num" id="current-ticket">—</div>
-      <div class="ticket-meta" id="current-meta"></div>
-    </div>
-    <div class="action-btns">
-      <button class="btn btn-success" id="btn-accept" disabled>受付</button>
-      <button class="btn btn-ghost"   id="btn-next"   disabled>次へ</button>
-      <button class="btn btn-danger"  id="btn-cancel" disabled>キャンセル</button>
-    </div>
-    <div class="next-list" id="next-list"></div>
-  </div>
-
-  <!-- 不在一覧 -->
-  <div id="absent-panel" style="display:none">
-    <div class="absent-title">不在番号</div>
-    <div class="absent-chips" id="absent-chips"></div>
-  </div>
-
-  <!-- 他時間帯 -->
-  <details id="slots-panel" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)">
-    <summary>他の時間帯の状況</summary>
-    <div id="slots-list"></div>
-  </details>
-
-  <!-- 検索ボタン -->
-  <button class="btn btn-ghost w-full" id="btn-search-open">🔍 整理番号を検索</button>
-</div>
-
-<!-- 受付確認モーダル -->
-<div id="confirm-modal" class="search-modal" style="display:none;position:fixed;inset:0;background:#000a;z-index:101;align-items:center;justify-content:center;padding:1rem">
-  <div class="modal-box">
-    <h3>受付確認</h3>
-    <div id="confirm-detail"></div>
-    <div class="flex gap-1">
-      <button class="btn btn-ghost w-full" onclick="closeConfirm()">キャンセル</button>
-      <button class="btn btn-success w-full" id="btn-do-accept">受付する</button>
-    </div>
-  </div>
-</div>
-
-<!-- 検索モーダル -->
-<div id="search-modal">
-  <div class="modal-box">
-    <h3 style="font-size:1rem">整理番号検索</h3>
-    <div class="flex gap-1">
-      <input id="search-input" placeholder="A01-0001" style="flex:1">
-      <button class="btn btn-primary btn-sm" id="btn-search">検索</button>
-    </div>
-    <div class="search-result" id="search-result"></div>
-    <button class="btn btn-ghost btn-sm" onclick="closeSearch()">閉じる</button>
-  </div>
-</div>
-
-<div id="toast-container"></div>
 <script type="module">
-import { api, toast, genKey, saveToken, clearToken, getToken } from './js/api.js';
+import {
+  api,
+  toast,
+  genKey,
+  saveToken,
+  clearToken,
+  getToken
+} from './js/api.js';
 
-let sheetId = null, activeQueue = null, currentRes = null, pollTimer = null;
+let sheetId = null;
+let activeQueue = null;
+let currentRes = null;
+let pollTimer = null;
 
-// ── ログイン ──────────────────────────────────────────────
-document.getElementById('btn-next').onclick = async () => {
-  const queueId = getActiveQueueId();
-  if (!queueId) {
-    toast('対象のキューがありません', 'error');
+// ============================================================
+// ログイン
+// ============================================================
+document.getElementById('btn-login').onclick = async () => {
+  const username = document
+    .getElementById('login-user')
+    .value
+    .trim();
+
+  const password = document
+    .getElementById('login-pass')
+    .value;
+
+  const errorEl =
+    document.getElementById('login-error');
+
+  errorEl.textContent = '';
+
+  if (!username || !password) {
+    errorEl.textContent =
+      'ユーザー名とパスワードを入力してください';
     return;
   }
 
-  const btn = document.getElementById('btn-next');
+  const btn =
+    document.getElementById('btn-login');
+
   btn.disabled = true;
+  btn.innerHTML =
+    '<span class="spinner"></span>';
 
   try {
-    if (currentRes) {
-      // 現在呼出中 → 不在扱いにして次を呼び出す
-      await api.markAbsentAndNext(queueId, genKey());
-      toast('不在処理して次を呼び出しました', 'info');
-    } else {
-      // まだ呼出中なし → 最初の番号を呼び出す
-      await api.callNext(queueId, genKey());
-      toast('次の番号を呼び出しました', 'info');
+    const data =
+      await api.login(username, password);
+
+    // トークン保存
+    saveToken(data.token);
+
+    // スタッフアカウントに紐付いたシート
+    sheetId = data.user?.sheetId ?? null;
+
+    if (!sheetId) {
+      throw new Error(
+        'このスタッフアカウントにはシートが設定されていません'
+      );
     }
 
-    await fetchAndRender();
+    document
+      .getElementById('header-sheet')
+      .textContent = `シート ${sheetId}`;
+
+    showMain();
 
   } catch (e) {
-    toast(e.message, 'error');
+    errorEl.textContent =
+      e.code === 'INVALID_CREDENTIALS'
+        ? 'ユーザー名またはパスワードが違います'
+        : (e.message || 'ログインに失敗しました');
+
   } finally {
     btn.disabled = false;
+    btn.textContent = 'ログイン';
   }
 };
-document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-login').click(); });
 
+// Enterキーでログイン
+document
+  .getElementById('login-pass')
+  .addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      document
+        .getElementById('btn-login')
+        .click();
+    }
+  });
+
+
+// ============================================================
+// メイン画面表示
+// ============================================================
 function showMain() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('header').style.display = 'flex';
-  document.getElementById('main').style.display = 'flex';
+  document.getElementById('login-screen').style.display =
+    'none';
+
+  document.getElementById('header').style.display =
+    'flex';
+
+  document.getElementById('main').style.display =
+    'flex';
+
   fetchAndRender();
-  pollTimer = setInterval(fetchAndRender, 8000);
+
+  clearInterval(pollTimer);
+
+  pollTimer =
+    setInterval(fetchAndRender, 8000);
 }
 
-// ── ログアウト ─────────────────────────────────────────────
-document.getElementById('btn-logout').onclick = async () => {
-  clearInterval(pollTimer);
-  try { await api.logout(); } catch(_) {}
-  clearToken();
-  location.reload();
-};
 
-// ── ポーリング ─────────────────────────────────────────────
+// ============================================================
+// ログアウト
+// ============================================================
+document
+  .getElementById('btn-logout')
+  .onclick = async () => {
+
+    clearInterval(pollTimer);
+
+    try {
+      await api.logout();
+    } catch (_) {}
+
+    clearToken();
+
+    location.reload();
+  };
+
+
+// ============================================================
+// ポーリング
+// ============================================================
 async function fetchAndRender() {
   if (!sheetId) return;
-  const dot = document.getElementById('poll-dot');
+
+  const dot =
+    document.getElementById('poll-dot');
+
   dot.classList.add('active');
+
   try {
-    const data = await api.getOverview(sheetId);
+    const data =
+      await api.getOverview(sheetId);
+
     renderOverview(data);
-    document.getElementById('poll-status').textContent = '接続中';
-  } catch(e) {
-    document.getElementById('poll-status').textContent = 'エラー';
-  } finally { setTimeout(() => dot.classList.remove('active'), 500); }
+
+    document
+      .getElementById('poll-status')
+      .textContent = '接続中';
+
+  } catch (e) {
+    console.error(e);
+
+    document
+      .getElementById('poll-status')
+      .textContent = 'エラー';
+
+  } finally {
+    setTimeout(
+      () => dot.classList.remove('active'),
+      500
+    );
+  }
 }
 
+
+// ============================================================
+// スタッフ画面描画
+// ============================================================
 function renderOverview(data) {
   const cur = data.current;
 
-  // アクティブなキューを保存
-  const activeSlotSummary = data.activeTimeSlot
-    ? data.timeSlots.find(s => s.id === data.activeTimeSlot.id)
-    : null;
+  // ----------------------------------------------------------
+  // アクティブキュー
+  // ----------------------------------------------------------
+  const activeSlotSummary =
+    data.activeTimeSlot
+      ? data.timeSlots.find(
+          s => s.id === data.activeTimeSlot.id
+        )
+      : null;
 
-  activeQueue = activeSlotSummary?.queue
-    ? { queueId: activeSlotSummary.queue.id }
-    : null;
+  activeQueue =
+    activeSlotSummary?.queue
+      ? {
+          queueId:
+            activeSlotSummary.queue.id
+        }
+      : null;
 
   currentRes = cur;
 
+  // ----------------------------------------------------------
   // 時間帯
-  document.getElementById('slot-label').textContent = data.activeTimeSlot
-    ? `${data.activeTimeSlot.name} 【${statusLabel(data.activeTimeSlot.status)}】`
-    : '待機中';
+  // ----------------------------------------------------------
+  document
+    .getElementById('slot-label')
+    .textContent =
+      data.activeTimeSlot
+        ? `${data.activeTimeSlot.name} 【${statusLabel(data.activeTimeSlot.status)}】`
+        : '待機中';
 
-  // 現在呼出中がある場合はそれを表示
-  // ない場合は「次に呼ぶ番号」を表示
-  const nextTicket = data.next?.[0];
 
-  document.getElementById('current-ticket').textContent =
+  // ----------------------------------------------------------
+  // 中央の番号
+  //
+  // 現在呼出中があれば current
+  // なければ next[0] を表示
+  // ----------------------------------------------------------
+  const nextTicket =
+    data.next?.[0] ?? null;
+
+  const displayTicket =
     cur?.ticketCode ??
     nextTicket?.ticketCode ??
     '—';
 
-  document.getElementById('current-meta').textContent =
-    cur
-      ? `${cur.groupSize} 名`
-      : nextTicket
-        ? '次に呼び出す番号'
-        : '';
+  document
+    .getElementById('current-ticket')
+    .textContent = displayTicket;
 
-  // ボタン
-  document.getElementById('btn-accept').disabled =
-    !data.canAccept || !cur;
 
-  document.getElementById('btn-next').disabled =
-    !data.canNext;
+  // ----------------------------------------------------------
+  // 中央の補足表示
+  // ----------------------------------------------------------
+  document
+    .getElementById('current-meta')
+    .textContent =
+      cur
+        ? `${cur.groupSize} 名`
+        : nextTicket
+          ? '次に呼び出す番号'
+          : '';
 
-  document.getElementById('btn-cancel').disabled =
-    !cur;
 
+  // ----------------------------------------------------------
+  // 受付
+  // ----------------------------------------------------------
+  document
+    .getElementById('btn-accept')
+    .disabled =
+      !data.canAccept || !cur;
+
+
+  // ----------------------------------------------------------
+  // 次へ
+  //
+  // 現在呼出中あり
+  //   → 不在にして次を呼ぶ
+  //
+  // 現在呼出中なし
+  //   → 最初の待機番号を呼ぶ
+  // ----------------------------------------------------------
+  document
+    .getElementById('btn-next')
+    .disabled =
+      !data.canNext;
+
+
+  // ----------------------------------------------------------
+  // キャンセル
+  // ----------------------------------------------------------
+  document
+    .getElementById('btn-cancel')
+    .disabled =
+      !cur;
+
+
+  // ----------------------------------------------------------
   // 次候補
-  const labels = ['次', '次々', '次々次'];
+  // ----------------------------------------------------------
+  const labels = [
+    '次',
+    '次々',
+    '次々次'
+  ];
 
-  document.getElementById('next-list').innerHTML =
-    (data.next ?? []).map((t, i) =>
-      `<div class="next-row">
-        <span class="next-label">${labels[i] ?? ''}</span>
-        <span class="next-code">${t.ticketCode ?? t}</span>
-      </div>`
-    ).join('');
+  document
+    .getElementById('next-list')
+    .innerHTML =
+      (data.next ?? [])
+        .map((t, i) => `
+          <div class="next-row">
+            <span class="next-label">
+              ${labels[i] ?? ''}
+            </span>
 
-  // 不在
-  const absentPanel = document.getElementById('absent-panel');
+            <span class="next-code">
+              ${t.ticketCode ?? '—'}
+            </span>
+          </div>
+        `)
+        .join('');
+
+
+  // ----------------------------------------------------------
+  // 不在一覧
+  // ----------------------------------------------------------
+  const absentPanel =
+    document.getElementById(
+      'absent-panel'
+    );
 
   if (data.absent?.length) {
     absentPanel.style.display = '';
 
-    document.getElementById('absent-chips').innerHTML =
-      data.absent.map(a =>
-        `<span class="absent-chip">${a.ticketCode}</span>`
-      ).join('');
+    document
+      .getElementById('absent-chips')
+      .innerHTML =
+        data.absent
+          .map(a => `
+            <span class="absent-chip">
+              ${a.ticketCode}
+            </span>
+          `)
+          .join('');
+
   } else {
-    absentPanel.style.display = 'none';
+    absentPanel.style.display =
+      'none';
   }
 
+
+  // ----------------------------------------------------------
   // 他時間帯
-  document.getElementById('slots-list').innerHTML =
-    data.timeSlots.map(s =>
-      `<div class="slot-row">
-        <span>
-          ${s.name}
-          <span class="badge badge-${s.status}">
-            ${statusLabel(s.status)}
-          </span>
-        </span>
-        <span class="text-muted">
-          ${s.reservedGroups}/${s.capacityGroups} 組
-        </span>
-      </div>`
-    ).join('');
+  // ----------------------------------------------------------
+  document
+    .getElementById('slots-list')
+    .innerHTML =
+      (data.timeSlots ?? [])
+        .map(s => `
+          <div class="slot-row">
+            <span>
+              ${s.name}
+
+              <span class="badge badge-${s.status}">
+                ${statusLabel(s.status)}
+              </span>
+            </span>
+
+            <span class="text-muted">
+              ${s.reservedGroups}/${s.capacityGroups} 組
+            </span>
+          </div>
+        `)
+        .join('');
 }
 
-window.doEmergencyCall = async (id) => {
-  try { await api.emergencyCall(id, genKey()); toast('即時呼出しました', 'success'); closeSearch(); fetchAndRender(); }
-  catch(e) { toast(e.message, 'error'); }
-};
-window.doCancel = async (id, code) => {
-  if (!confirm(`${code} を即時キャンセルしますか？`)) return;
-  try { await api.cancelStaff(id, genKey()); toast('キャンセルしました', 'success'); closeSearch(); fetchAndRender(); }
-  catch(e) { toast(e.message, 'error'); }
+
+// ============================================================
+// 受付ボタン
+// ============================================================
+document
+  .getElementById('btn-accept')
+  .onclick = async () => {
+
+    if (!currentRes) return;
+
+    document
+      .getElementById('confirm-detail')
+      .innerHTML = `
+        <p>
+          <strong>整理番号:</strong>
+          ${currentRes.ticketCode}
+        </p>
+
+        <p>
+          <strong>人数:</strong>
+          ${currentRes.groupSize} 名
+        </p>
+      `;
+
+    document
+      .getElementById('confirm-modal')
+      .style.display = 'flex';
+
+    document
+      .getElementById('btn-do-accept')
+      .onclick = async () => {
+
+        const btn =
+          document.getElementById(
+            'btn-do-accept'
+          );
+
+        btn.disabled = true;
+
+        btn.innerHTML =
+          '<span class="spinner"></span>';
+
+        try {
+          await api.acceptReservation(
+            currentRes.reservationId,
+            genKey()
+          );
+
+          closeConfirm();
+
+          toast(
+            '受付しました',
+            'success'
+          );
+
+          await fetchAndRender();
+
+        } catch (e) {
+          toast(
+            e.message,
+            'error'
+          );
+
+        } finally {
+          btn.disabled = false;
+          btn.textContent =
+            '受付する';
+        }
+      };
+  };
+
+
+window.closeConfirm = () => {
+  document
+    .getElementById('confirm-modal')
+    .style.display = 'none';
 };
 
+
+// ============================================================
+// 次へボタン
+// ============================================================
+document
+  .getElementById('btn-next')
+  .onclick = async () => {
+
+    const queueId =
+      getActiveQueueId();
+
+    if (!queueId) {
+      toast(
+        '対象のキューがありません',
+        'error'
+      );
+      return;
+    }
+
+    const btn =
+      document.getElementById(
+        'btn-next'
+      );
+
+    btn.disabled = true;
+
+    try {
+
+      // ------------------------------------------------------
+      // 現在呼出中がある
+      // → 不在扱いにして次へ
+      // ------------------------------------------------------
+      if (currentRes) {
+
+        await api.markAbsentAndNext(
+          queueId,
+          genKey()
+        );
+
+        toast(
+          '不在処理して次を呼び出しました',
+          'info'
+        );
+
+      }
+
+      // ------------------------------------------------------
+      // 現在呼出中がない
+      // → 最初の待機番号を呼び出す
+      // ------------------------------------------------------
+      else {
+
+        await api.callNext(
+          queueId,
+          genKey()
+        );
+
+        toast(
+          '次の番号を呼び出しました',
+          'info'
+        );
+      }
+
+      await fetchAndRender();
+
+    } catch (e) {
+
+      console.error(e);
+
+      toast(
+        e.message,
+        'error'
+      );
+
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+
+// ============================================================
+// キャンセルボタン
+// ============================================================
+document
+  .getElementById('btn-cancel')
+  .onclick = async () => {
+
+    if (!currentRes) return;
+
+    const confirmed =
+      confirm(
+        `${currentRes.ticketCode} をキャンセルしますか？`
+      );
+
+    if (!confirmed) return;
+
+    try {
+
+      await api.cancelStaff(
+        currentRes.reservationId,
+        genKey()
+      );
+
+      toast(
+        'キャンセルしました',
+        'success'
+      );
+
+      await fetchAndRender();
+
+    } catch (e) {
+      toast(
+        e.message,
+        'error'
+      );
+    }
+  };
+
+
+// ============================================================
+// 検索
+// ============================================================
+document
+  .getElementById('btn-search-open')
+  .onclick = () => {
+
+    document
+      .getElementById('search-modal')
+      .classList.add('open');
+
+    document
+      .getElementById('search-input')
+      .focus();
+  };
+
+
+window.closeSearch = () => {
+  document
+    .getElementById('search-modal')
+    .classList.remove('open');
+
+  document
+    .getElementById('search-result')
+    .innerHTML = '';
+
+  document
+    .getElementById('search-input')
+    .value = '';
+};
+
+
+document
+  .getElementById('btn-search')
+  .onclick = async () => {
+
+    const q =
+      document
+        .getElementById('search-input')
+        .value
+        .trim();
+
+    if (!q) return;
+
+    try {
+
+      const data =
+        await api.searchReservations(
+          sheetId,
+          q
+        );
+
+      renderSearchResults(
+        data.results
+      );
+
+    } catch (e) {
+      toast(
+        e.message,
+        'error'
+      );
+    }
+  };
+
+
+function renderSearchResults(results) {
+  const el =
+    document.getElementById(
+      'search-result'
+    );
+
+  if (!results.length) {
+    el.innerHTML =
+      '<p class="text-muted">見つかりませんでした</p>';
+    return;
+  }
+
+  el.innerHTML =
+    results
+      .map(r => `
+        <div class="result-card">
+
+          <div
+            style="font-family:var(--font-mono);font-weight:700"
+          >
+            ${r.ticketCode}
+          </div>
+
+          <div class="text-muted">
+            ${r.timeSlot.name}
+            /
+            ${r.groupSize}名
+            /
+            <span class="badge badge-${r.status}">
+              ${r.status}
+            </span>
+          </div>
+
+          <div class="result-actions">
+
+            ${
+              r.status === 'reserved' ||
+              r.status === 'absent'
+                ? `
+                  <button
+                    class="btn btn-sm btn-primary"
+                    onclick="doEmergencyCall(${r.id})"
+                  >
+                    即時呼出
+                  </button>
+                `
+                : ''
+            }
+
+            <button
+              class="btn btn-sm btn-danger"
+              onclick="doCancel(${r.id}, '${r.ticketCode}')"
+            >
+              即時キャンセル
+            </button>
+
+          </div>
+        </div>
+      `)
+      .join('');
+}
+
+
+// ============================================================
+// 即時呼出
+// ============================================================
+window.doEmergencyCall = async (id) => {
+
+  try {
+
+    await api.emergencyCall(
+      id,
+      genKey()
+    );
+
+    toast(
+      '即時呼出しました',
+      'success'
+    );
+
+    closeSearch();
+
+    await fetchAndRender();
+
+  } catch (e) {
+
+    toast(
+      e.message,
+      'error'
+    );
+  }
+};
+
+
+// ============================================================
+// 即時キャンセル
+// ============================================================
+window.doCancel = async (
+  id,
+  code
+) => {
+
+  if (
+    !confirm(
+      `${code} を即時キャンセルしますか？`
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    await api.cancelStaff(
+      id,
+      genKey()
+    );
+
+    toast(
+      'キャンセルしました',
+      'success'
+    );
+
+    closeSearch();
+
+    await fetchAndRender();
+
+  } catch (e) {
+
+    toast(
+      e.message,
+      'error'
+    );
+  }
+};
+
+
+// ============================================================
+// 現在のキューID
+// ============================================================
 function getActiveQueueId() {
   return activeQueue?.queueId ?? null;
 }
 
+
+// ============================================================
+// ステータス表示名
+// ============================================================
 function statusLabel(s) {
-  return {reservation_open:'予約受付中',before_call:'呼出前',calling:'呼出中',
-    in_progress:'進行中',expiration_pending:'失効待ち',expired:'失効済'}[s] ?? s;
+  return {
+    reservation_open: '予約受付中',
+    before_call: '呼出前',
+    calling: '呼出中',
+    in_progress: '進行中',
+    expiration_pending: '失効待ち',
+    expired: '失効済'
+  }[s] ?? s;
 }
 
-// 既存トークンがあれば自動ログイン試行
+
+// ============================================================
+// 既存トークン
+// ============================================================
 if (getToken()) {
-  // sheetIdをoverviewから取得試みる（共有アカウントはKVに保存済み）
-  // ここではloginを再度促す方式（token復元は技術詳細設計で改善余地あり）
+  // 自動復元は現状行わない。
+  // sheetId はログイン時にユーザー情報から取得する。
 }
 </script>
-</body>
-</html>
